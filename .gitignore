@@ -1,0 +1,44 @@
+# Database
+builder/db/*.db
+builder/db/*.db-shm
+builder/db/*.db-wal
+
+# Uploads
+builder/uploads/*
+!builder/uploads/.gitkeep
+
+# Export temporanei
+builder/export/*
+!builder/export/.gitkeep
+
+# Assets generati
+assets/img/*
+!assets/img/.gitkeep
+assets/css/style.css
+
+# Index esportato (opzionale - decommenta se vuoi versionarlo)
+# index.html
+
+# Editor e IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+*.log
+
+# Cache
+.cache/
+*.cache
+
+# Backup
+*.bak
+*.backup
+*.old
+
+# OS
+Thumbs.db
+desktop.ini
