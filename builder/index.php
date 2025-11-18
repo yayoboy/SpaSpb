@@ -4,11 +4,9 @@
  * Single-file PHP + SQLite Page Builder
  */
 
-// Configurazione
-define('DB_PATH', __DIR__ . '/db/data.db');
-define('UPLOAD_DIR', __DIR__ . '/uploads/');
-define('EXPORT_DIR', dirname(__DIR__));
-define('ASSETS_DIR', EXPORT_DIR . '/assets/');
+// Carica configurazione e autenticazione
+require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/auth.php';
 
 // Inizializza database
 function initDatabase() {
@@ -65,39 +63,70 @@ if (in_array($action, ['api_save', 'api_load', 'api_delete', 'api_upload'])) {
 
 // Routing
 switch ($action) {
+    case 'login':
+        showLoginPage();
+        break;
+
+    case 'do_login':
+        $username = $_POST['username'] ?? '';
+        $password = $_POST['password'] ?? '';
+
+        if (login($username, $password)) {
+            header('Location: ?action=dashboard');
+            exit;
+        } else {
+            showLoginPage('Username o password non corretti');
+        }
+        break;
+
+    case 'logout':
+        logout();
+        header('Location: ?action=login');
+        exit;
+
+    // Tutte le altre route richiedono autenticazione
     case 'dashboard':
+        requireAuth();
         showDashboard($db);
         break;
 
     case 'new':
+        requireAuth();
         createNewPage($db);
         break;
 
     case 'edit':
+        requireAuth();
         showEditor($db);
         break;
 
     case 'api_save':
+        requireAuth();
         apiSavePage($db);
         break;
 
     case 'api_load':
+        requireAuth();
         apiLoadPage($db);
         break;
 
     case 'api_delete':
+        requireAuth();
         apiDeletePage($db);
         break;
 
     case 'api_upload':
+        requireAuth();
         apiUploadImage();
         break;
 
     case 'export':
+        requireAuth();
         exportPage($db);
         break;
 
     default:
+        requireAuth();
         showDashboard($db);
 }
 
@@ -125,7 +154,15 @@ function showDashboard($db) {
         <div class="container">
             <header class="dashboard-header">
                 <h1>🎨 SpaSpb Page Builder</h1>
-                <a href="?action=new" class="btn btn-primary">+ Nuova Pagina</a>
+                <div class="dashboard-actions">
+                    <?php if (AUTH_ENABLED): ?>
+                        <span class="user-info">👤 <?= htmlspecialchars($_SESSION['username'] ?? 'Utente') ?></span>
+                    <?php endif; ?>
+                    <a href="?action=new" class="btn btn-primary">+ Nuova Pagina</a>
+                    <?php if (AUTH_ENABLED): ?>
+                        <a href="?action=logout" class="btn btn-secondary">Logout</a>
+                    <?php endif; ?>
+                </div>
             </header>
 
             <div class="pages-grid">
@@ -380,23 +417,64 @@ function apiUploadImage() {
     }
 
     $file = $_FILES['image'];
-    $uploadDir = UPLOAD_DIR;
 
+    // Verifica errori upload
+    if ($file['error'] !== UPLOAD_ERR_OK) {
+        echo json_encode(['success' => false, 'error' => 'Errore durante l\'upload']);
+        return;
+    }
+
+    // Verifica dimensione
+    if ($file['size'] > MAX_UPLOAD_SIZE) {
+        $maxMB = MAX_UPLOAD_SIZE / 1024 / 1024;
+        echo json_encode(['success' => false, 'error' => "File troppo grande (max {$maxMB}MB)"]);
+        return;
+    }
+
+    // Verifica estensione
+    $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+    if (!in_array($ext, ALLOWED_EXTENSIONS)) {
+        echo json_encode(['success' => false, 'error' => 'Formato file non permesso']);
+        return;
+    }
+
+    // Verifica MIME type
+    $allowedMimeTypes = [
+        'image/jpeg',
+        'image/jpg',
+        'image/png',
+        'image/gif',
+        'image/webp',
+        'image/svg+xml'
+    ];
+
+    $finfo = finfo_open(FILEINFO_MIME_TYPE);
+    $mimeType = finfo_file($finfo, $file['tmp_name']);
+    finfo_close($finfo);
+
+    if (!in_array($mimeType, $allowedMimeTypes)) {
+        echo json_encode(['success' => false, 'error' => 'Tipo di file non valido']);
+        return;
+    }
+
+    // Crea directory se non esiste
+    $uploadDir = UPLOAD_DIR;
     if (!is_dir($uploadDir)) {
         mkdir($uploadDir, 0755, true);
     }
 
-    $ext = pathinfo($file['name'], PATHINFO_EXTENSION);
-    $filename = uniqid() . '.' . $ext;
+    // Genera nome file sicuro
+    $filename = uniqid('img_', true) . '.' . $ext;
     $filepath = $uploadDir . $filename;
 
+    // Sposta file
     if (move_uploaded_file($file['tmp_name'], $filepath)) {
         echo json_encode([
             'success' => true,
             'url' => 'uploads/' . $filename
         ]);
     } else {
-        echo json_encode(['success' => false, 'error' => 'Errore nel caricamento']);
+        echo json_encode(['success' => false, 'error' => 'Errore nel salvataggio del file']);
     }
 }
 

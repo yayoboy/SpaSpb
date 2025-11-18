@@ -2,6 +2,26 @@
 
 Un potente page builder single-file in PHP + SQLite per creare pagine one-page (landing pages, gallerie, vetrine) con supporto per diverse librerie UI.
 
+## ⚠️ IMPORTANTE: Sicurezza
+
+**Prima di usare questo builder su un hosting web pubblico:**
+
+1. **Abilita l'autenticazione** in `builder/config.php`:
+   ```php
+   define('AUTH_ENABLED', true);
+   ```
+
+2. **Cambia le credenziali di default**:
+   - Default: `admin` / `admin123`
+   - Genera nuovo hash: `php -r "echo password_hash('tuapassword', PASSWORD_DEFAULT);"`
+   - Aggiorna `AUTH_PASSWORD` in `builder/config.php`
+
+3. **Verifica protezione database**: `builder/db/` NON deve essere accessibile via web
+
+4. **Usa HTTPS** in produzione
+
+📖 **Leggi la guida completa:** [SECURITY.md](SECURITY.md)
+
 ## Caratteristiche
 
 - **Single-file architecture**: Backend completo in un unico file PHP

@@ -39,6 +39,19 @@ body {
     font-weight: 700;
 }
 
+.dashboard-actions {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.user-info {
+    color: #6b7280;
+    font-size: 0.95rem;
+    font-weight: 500;
+    padding: 10px 16px;
+}
+
 .pages-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
