@@ -42,3 +42,7 @@ assets/css/style.css
 # OS
 Thumbs.db
 desktop.ini
+
+# Docker
+backups/
+*.tar.gz

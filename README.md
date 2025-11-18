@@ -62,9 +62,33 @@ Un potente page builder single-file in PHP + SQLite per creare pagine one-page (
 - Estensione SQLite3 abilitata
 - Web server (Apache, Nginx, PHP built-in server)
 
+**OPPURE**
+
+- Docker 20.10+ e Docker Compose 2.0+ (metodo consigliato)
+
 ## Installazione
 
-### Metodo 1: Server Web (Apache/Nginx)
+### Metodo 1: Docker (🚀 Consigliato)
+
+Il modo più semplice e veloce per testare il builder:
+
+```bash
+# Clona il repository
+git clone https://github.com/tuouser/SpaSpb.git
+cd SpaSpb
+
+# Avvia con Docker
+./docker/start.sh
+
+# OPPURE con Make
+make install
+```
+
+Poi apri: **http://localhost:8080/builder/**
+
+📖 Guida completa: [docker/README.md](docker/README.md)
+
+### Metodo 2: Server Web (Apache/Nginx)
 
 1. Clona il repository nella root del tuo web server:
 ```bash
@@ -84,7 +108,7 @@ chmod 755 assets
 http://tuodominio.it/builder/
 ```
 
-### Metodo 2: PHP Built-in Server (Sviluppo)
+### Metodo 3: PHP Built-in Server (Sviluppo)
 
 1. Clona il repository:
 ```bash

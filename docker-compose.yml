@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  spaspb:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: spaspb-pagebuilder
+    ports:
+      - "8080:80"
+    volumes:
+      # Monta solo le directory che devono persistere
+      - ./builder/db:/var/www/html/builder/db
+      - ./builder/uploads:/var/www/html/builder/uploads
+      - ./assets:/var/www/html/assets
+      - ./index.html:/var/www/html/index.html:rw
+    environment:
+      - APACHE_RUN_USER=www-data
+      - APACHE_RUN_GROUP=www-data
+      - PHP_MEMORY_LIMIT=256M
+      - PHP_UPLOAD_MAX_FILESIZE=10M
+      - PHP_POST_MAX_SIZE=10M
+    restart: unless-stopped
+    networks:
+      - spaspb-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/builder/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+networks:
+  spaspb-network:
+    driver: bridge
+
+volumes:
+  # Volumi per persistenza dati (opzionale)
+  db-data:
+  uploads-data:

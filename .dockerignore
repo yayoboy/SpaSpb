@@ -1,0 +1,73 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+docker/
+
+# Documentation
+*.md
+README.md
+SECURITY.md
+LICENSE
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+tmp/
+temp/
+
+# Backup
+*.bak
+*.backup
+*.old
+backups/
+
+# Node (se presente)
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Database (verrà creato al runtime)
+builder/db/*.db
+builder/db/*.db-shm
+builder/db/*.db-wal
+
+# Uploads (verranno gestiti via volume)
+builder/uploads/*
+!builder/uploads/.gitkeep
+
+# Assets generati
+assets/img/*
+!assets/img/.gitkeep
+
+# Index esportato
+index.html
+
+# Cache
+.cache/
+*.cache
+
+# Tests (se presenti)
+tests/
+phpunit.xml
