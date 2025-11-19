@@ -9,10 +9,12 @@ services:
     ports:
       - "8080:80"
     volumes:
-      # Monta solo le directory che devono persistere
-      - ./builder/db:/var/www/html/builder/db
-      - ./builder/uploads:/var/www/html/builder/uploads
-      - ./assets:/var/www/html/assets
+      # Volume unificato da 1GB per tutti i dati persistenti
+      # IMPORTANTE: Limite consigliato di 1GB (1024MB) per il volume ./data
+      # Usa 'make check-space' per monitorare l'utilizzo
+      - ./data:/var/www/html/data:rw
+
+      # Mantieni anche index.html per compatibilità
       - ./index.html:/var/www/html/index.html:rw
     environment:
       - APACHE_RUN_USER=www-data
@@ -33,8 +35,3 @@ services:
 networks:
   spaspb-network:
     driver: bridge
-
-volumes:
-  # Volumi per persistenza dati (opzionale)
-  db-data:
-  uploads-data:

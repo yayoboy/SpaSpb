@@ -295,6 +295,18 @@ function showEditor($db) {
                         <span class="block-icon">📧</span>
                         <span>Contatti</span>
                     </div>
+                    <div class="block-item" draggable="true" data-type="video">
+                        <span class="block-icon">🎬</span>
+                        <span>Video</span>
+                    </div>
+                    <div class="block-item" draggable="true" data-type="tabs">
+                        <span class="block-icon">📑</span>
+                        <span>Tabs</span>
+                    </div>
+                    <div class="block-item" draggable="true" data-type="countdown">
+                        <span class="block-icon">⏱️</span>
+                        <span>Countdown</span>
+                    </div>
                 </div>
             </aside>
 
@@ -311,12 +323,30 @@ function showEditor($db) {
                             <option value="shadcn" <?= $page['ui_library'] === 'shadcn' ? 'selected' : '' ?>>shadcn/ui</option>
                             <option value="bulma" <?= $page['ui_library'] === 'bulma' ? 'selected' : '' ?>>Bulma</option>
                         </select>
+
+                        <div class="theme-selector">
+                            <label>Tema:</label>
+                            <select id="theme-selector">
+                                <option value="light">Light</option>
+                                <option value="dark">Dark</option>
+                                <option value="professional">Professional</option>
+                                <option value="creative">Creative</option>
+                                <option value="minimal">Minimal</option>
+                            </select>
+                        </div>
                     </div>
 
                     <div class="toolbar-right">
-                        <button id="btn-preview" class="btn btn-secondary">👁️ Anteprima</button>
-                        <button id="btn-save" class="btn btn-primary">💾 Salva</button>
-                        <a href="?action=export&id=<?= $id ?>" class="btn btn-success">📤 Esporta</a>
+                        <div class="responsive-buttons">
+                            <button id="btn-desktop" class="btn btn-sm active" onclick="setViewport('desktop')" title="Desktop">🖥️</button>
+                            <button id="btn-tablet" class="btn btn-sm" onclick="setViewport('tablet')" title="Tablet">📱</button>
+                            <button id="btn-mobile" class="btn btn-sm" onclick="setViewport('mobile')" title="Mobile">📲</button>
+                        </div>
+                        <button id="btn-undo" class="btn btn-secondary" onclick="undo()" title="Annulla (Ctrl+Z)" style="opacity: 0.5;">↩️</button>
+                        <button id="btn-redo" class="btn btn-secondary" onclick="redo()" title="Ripristina (Ctrl+Y)" style="opacity: 0.5;">↪️</button>
+                        <button id="btn-preview" class="btn btn-secondary">👁️</button>
+                        <button id="btn-save" class="btn btn-primary">💾</button>
+                        <a href="?action=export&id=<?= $id ?>" class="btn btn-success">📤</a>
                     </div>
                 </div>
 
@@ -356,12 +386,27 @@ function apiSavePage($db) {
     $title = $_POST['title'] ?? '';
     $blocks = $_POST['blocks'] ?? '[]';
     $uiLibrary = $_POST['ui_library'] ?? 'tailwind';
+    $theme = $_POST['theme'] ?? 'light';
 
-    $stmt = $db->prepare("UPDATE pages SET title = ?, blocks = ?, ui_library = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
+    // Verifica se la colonna theme esiste, altrimenti la aggiunge
+    $result = $db->query("PRAGMA table_info(pages)");
+    $hasTheme = false;
+    while ($col = $result->fetchArray(SQLITE3_ASSOC)) {
+        if ($col['name'] === 'theme') {
+            $hasTheme = true;
+            break;
+        }
+    }
+    if (!$hasTheme) {
+        $db->exec("ALTER TABLE pages ADD COLUMN theme TEXT DEFAULT 'light'");
+    }
+
+    $stmt = $db->prepare("UPDATE pages SET title = ?, blocks = ?, ui_library = ?, theme = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
     $stmt->bindValue(1, $title, SQLITE3_TEXT);
     $stmt->bindValue(2, $blocks, SQLITE3_TEXT);
     $stmt->bindValue(3, $uiLibrary, SQLITE3_TEXT);
-    $stmt->bindValue(4, $id, SQLITE3_INTEGER);
+    $stmt->bindValue(4, $theme, SQLITE3_TEXT);
+    $stmt->bindValue(5, $id, SQLITE3_INTEGER);
 
     if ($stmt->execute()) {
         echo json_encode(['success' => true]);

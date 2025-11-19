@@ -1,17 +1,21 @@
-# Database
+# Volume unificato dati (nuovo sistema)
+data/
+!data/.gitkeep
+
+# Database (legacy - ora in data/db/)
 builder/db/*.db
 builder/db/*.db-shm
 builder/db/*.db-wal
 
-# Uploads
+# Uploads (legacy - ora in data/uploads/)
 builder/uploads/*
 !builder/uploads/.gitkeep
 
-# Export temporanei
+# Export temporanei (legacy - ora in data/export/)
 builder/export/*
 !builder/export/.gitkeep
 
-# Assets generati
+# Assets generati (legacy - ora in data/assets/)
 assets/img/*
 !assets/img/.gitkeep
 assets/css/style.css

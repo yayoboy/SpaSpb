@@ -3,6 +3,20 @@
  * Stili personalizzati per i siti esportati
  */
 
+/* ============================
+   CSS VARIABLES - TEMI
+   ============================ */
+:root {
+    --theme-primary: #3b82f6;
+    --theme-secondary: #6b7280;
+    --theme-background: #ffffff;
+    --theme-surface: #f9fafb;
+    --theme-text: #1f2937;
+    --theme-text-muted: #6b7280;
+    --theme-border: #e5e7eb;
+    --theme-accent: #10b981;
+}
+
 /* Reset e Base */
 * {
     margin: 0;
@@ -13,8 +27,63 @@
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     line-height: 1.6;
-    color: #1f2937;
-    background: #ffffff;
+    color: var(--theme-text);
+    background: var(--theme-background);
+}
+
+/* ============================
+   GRIGLIA A 12 COLONNE
+   ============================ */
+.grid-container {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: 24px;
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+.grid-item {
+    grid-column: span 12;
+}
+
+/* Grid Column Spans */
+.col-1 { grid-column: span 1; }
+.col-2 { grid-column: span 2; }
+.col-3 { grid-column: span 3; }
+.col-4 { grid-column: span 4; }
+.col-5 { grid-column: span 5; }
+.col-6 { grid-column: span 6; }
+.col-7 { grid-column: span 7; }
+.col-8 { grid-column: span 8; }
+.col-9 { grid-column: span 9; }
+.col-10 { grid-column: span 10; }
+.col-11 { grid-column: span 11; }
+.col-12 { grid-column: span 12; }
+
+/* Grid Offsets */
+.offset-1 { margin-left: calc(1 * 100% / 12); }
+.offset-2 { margin-left: calc(2 * 100% / 12); }
+.offset-3 { margin-left: calc(3 * 100% / 12); }
+.offset-4 { margin-left: calc(4 * 100% / 12); }
+.offset-5 { margin-left: calc(5 * 100% / 12); }
+.offset-6 { margin-left: calc(6 * 100% / 12); }
+
+/* Responsive Grid */
+@media (max-width: 768px) {
+    .grid-container {
+        gap: 16px;
+    }
+
+    .col-1, .col-2, .col-3, .col-4, .col-5, .col-6,
+    .col-7, .col-8, .col-9, .col-10, .col-11, .col-12 {
+        grid-column: span 12;
+    }
+
+    .offset-1, .offset-2, .offset-3, .offset-4, .offset-5, .offset-6 {
+        margin-left: 0;
+    }
 }
 
 img {
@@ -296,3 +365,75 @@ html {
     background: #3b82f6;
     color: white;
 }
+
+/* ============================
+   ANIMAZIONI ON SCROLL
+   ============================ */
+
+/* Stato iniziale per elementi animati */
+.scroll-animate {
+    opacity: 0;
+}
+
+.scroll-animate.is-visible {
+    animation-fill-mode: forwards;
+}
+
+/* Keyframes */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(40px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-40px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideLeft {
+    from { opacity: 0; transform: translateX(40px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes slideRight {
+    from { opacity: 0; transform: translateX(-40px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes zoomIn {
+    from { opacity: 0; transform: scale(0.8); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes zoomOut {
+    from { opacity: 0; transform: scale(1.2); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes flip {
+    from { opacity: 0; transform: perspective(600px) rotateX(-60deg); }
+    to { opacity: 1; transform: perspective(600px) rotateX(0deg); }
+}
+
+@keyframes bounce {
+    0% { opacity: 0; transform: translateY(40px); }
+    60% { opacity: 1; transform: translateY(-10px); }
+    80% { transform: translateY(5px); }
+    100% { transform: translateY(0); }
+}
+
+/* Classi animazione */
+.animate-fade-in { animation-name: fadeIn; }
+.animate-slide-up { animation-name: slideUp; }
+.animate-slide-down { animation-name: slideDown; }
+.animate-slide-left { animation-name: slideLeft; }
+.animate-slide-right { animation-name: slideRight; }
+.animate-zoom-in { animation-name: zoomIn; }
+.animate-zoom-out { animation-name: zoomOut; }
+.animate-flip { animation-name: flip; }
+.animate-bounce { animation-name: bounce; }

@@ -10,6 +10,7 @@ RUN apt-get update && apt-get install -y \
     libfreetype6-dev \
     libwebp-dev \
     libzip-dev \
+    libsqlite3-dev \
     unzip \
     git \
     && rm -rf /var/lib/apt/lists/*
@@ -60,19 +61,22 @@ WORKDIR /var/www/html
 # Copia l'applicazione
 COPY --chown=www-data:www-data . /var/www/html/
 
-# Crea directory necessarie con permessi corretti
-RUN mkdir -p /var/www/html/builder/db \
-    && mkdir -p /var/www/html/builder/uploads \
-    && mkdir -p /var/www/html/builder/export \
-    && mkdir -p /var/www/html/assets/css \
-    && mkdir -p /var/www/html/assets/img \
-    && chown -R www-data:www-data /var/www/html/builder/db \
-    && chown -R www-data:www-data /var/www/html/builder/uploads \
-    && chown -R www-data:www-data /var/www/html/builder/export \
-    && chown -R www-data:www-data /var/www/html/assets \
-    && chmod -R 755 /var/www/html/builder/db \
-    && chmod -R 755 /var/www/html/builder/uploads \
-    && chmod -R 755 /var/www/html/assets
+# Crea directory per il volume unificato e symlink
+RUN mkdir -p /var/www/html/data/db \
+    && mkdir -p /var/www/html/data/uploads \
+    && mkdir -p /var/www/html/data/assets/css \
+    && mkdir -p /var/www/html/data/assets/img \
+    && mkdir -p /var/www/html/data/export \
+    && mkdir -p /var/www/html/builder \
+    && chown -R www-data:www-data /var/www/html/data \
+    && chmod -R 755 /var/www/html/data
+
+# Crea symlink dalle directory originali al volume unificato
+# Questo permette all'applicazione di funzionare senza modifiche al codice
+RUN ln -sf /var/www/html/data/db /var/www/html/builder/db \
+    && ln -sf /var/www/html/data/uploads /var/www/html/builder/uploads \
+    && ln -sf /var/www/html/data/export /var/www/html/builder/export \
+    && ln -sf /var/www/html/data/assets /var/www/html/assets
 
 # Esponi porta 80
 EXPOSE 80

@@ -338,11 +338,12 @@ body {
 }
 
 .canvas-block {
+    position: relative;
     background: white;
     border: 2px solid #e5e7eb;
     border-radius: 12px;
     margin-bottom: 24px;
-    overflow: hidden;
+    overflow: visible;
     transition: all 0.2s ease;
     cursor: pointer;
 }
@@ -597,3 +598,572 @@ textarea.form-control {
 .p-1 { padding: 0.5rem; }
 .p-2 { padding: 1rem; }
 .p-3 { padding: 1.5rem; }
+
+/* ============================
+   TEMA E CSS VARIABLES
+   ============================ */
+:root {
+    --theme-primary: #3b82f6;
+    --theme-secondary: #6b7280;
+    --theme-background: #ffffff;
+    --theme-surface: #f9fafb;
+    --theme-text: #1f2937;
+    --theme-text-muted: #6b7280;
+    --theme-border: #e5e7eb;
+    --theme-accent: #10b981;
+}
+
+/* Selettore Tema */
+.theme-selector {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.theme-selector label {
+    font-size: 0.85rem;
+    color: #6b7280;
+}
+
+.theme-selector select {
+    padding: 6px 12px;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    background: white;
+    cursor: pointer;
+}
+
+/* ============================
+   GRIGLIA A 12 COLONNE
+   ============================ */
+.grid-container {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: 16px;
+    width: 100%;
+}
+
+.canvas-block {
+    position: relative;
+    grid-column: span 12;
+}
+
+/* Grid Info Badge */
+.block-grid-info {
+    background: #e5e7eb;
+    color: #4b5563;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    margin-left: auto;
+    margin-right: 12px;
+}
+
+/* ============================
+   CONTROLLI GRIGLIA
+   ============================ */
+.grid-controls {
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 16px;
+}
+
+.grid-control-item {
+    margin-bottom: 12px;
+}
+
+.grid-control-item:last-child {
+    margin-bottom: 0;
+}
+
+.grid-control-item label {
+    font-size: 0.8rem;
+    font-weight: 500;
+    margin-bottom: 6px;
+    display: block;
+}
+
+.range-slider {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 6px;
+    border-radius: 3px;
+    background: #e5e7eb;
+    outline: none;
+    padding: 0;
+    margin: 0;
+}
+
+.range-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #3b82f6;
+    cursor: pointer;
+    border: 2px solid white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.range-slider::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #3b82f6;
+    cursor: pointer;
+    border: 2px solid white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.range-value {
+    display: inline-block;
+    margin-top: 4px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #3b82f6;
+}
+
+/* ============================
+   RESIZE HANDLES
+   ============================ */
+.resize-handle {
+    position: absolute;
+    background: transparent;
+    z-index: 10;
+}
+
+.resize-handle:hover {
+    background: rgba(59, 130, 246, 0.3);
+}
+
+.resize-handle-right {
+    top: 0;
+    right: 0;
+    width: 8px;
+    height: 100%;
+    cursor: ew-resize;
+}
+
+.resize-handle-bottom {
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 8px;
+    cursor: ns-resize;
+}
+
+.resize-handle-corner {
+    bottom: 0;
+    right: 0;
+    width: 16px;
+    height: 16px;
+    cursor: nwse-resize;
+    background: #3b82f6;
+    border-radius: 4px 0 8px 0;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.canvas-block:hover .resize-handle-corner {
+    opacity: 1;
+}
+
+.canvas-block.resizing {
+    opacity: 0.8;
+    outline: 2px dashed #3b82f6;
+}
+
+.canvas-block.selected .resize-handle-corner {
+    opacity: 1;
+}
+
+/* Grid Preview Lines */
+.grid-container::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: repeating-linear-gradient(
+        to right,
+        transparent,
+        transparent calc(100% / 12 - 1px),
+        rgba(59, 130, 246, 0.1) calc(100% / 12 - 1px),
+        rgba(59, 130, 246, 0.1) calc(100% / 12)
+    );
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.canvas:hover .grid-container::before {
+    opacity: 0.5;
+}
+
+/* ============================
+   PREVIEW TEMI
+   ============================ */
+.theme-preview {
+    padding: 16px;
+    border-radius: 8px;
+    background: var(--theme-background);
+    color: var(--theme-text);
+    border: 1px solid var(--theme-border);
+}
+
+.theme-preview h3 {
+    color: var(--theme-primary);
+    margin-bottom: 8px;
+}
+
+.theme-preview p {
+    color: var(--theme-text-muted);
+}
+
+.theme-preview .accent {
+    color: var(--theme-accent);
+}
+
+/* ============================
+   RESPONSIVE PREVIEW
+   ============================ */
+.responsive-buttons {
+    display: flex;
+    gap: 4px;
+    background: #e5e7eb;
+    padding: 4px;
+    border-radius: 8px;
+    margin-right: 12px;
+}
+
+.responsive-buttons button {
+    padding: 6px 10px;
+    border: none;
+    background: transparent;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.responsive-buttons button:hover {
+    background: rgba(255, 255, 255, 0.5);
+}
+
+.responsive-buttons button.active {
+    background: white;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Viewport simulations */
+.canvas.viewport-desktop .grid-container {
+    max-width: 100%;
+    margin: 0 auto;
+}
+
+.canvas.viewport-tablet .grid-container {
+    max-width: 768px;
+    margin: 0 auto;
+    box-shadow: 0 0 0 1px #e5e7eb;
+    background: white;
+    border-radius: 8px;
+}
+
+.canvas.viewport-mobile .grid-container {
+    max-width: 375px;
+    margin: 0 auto;
+    box-shadow: 0 0 0 1px #e5e7eb;
+    background: white;
+    border-radius: 8px;
+}
+
+/* Viewport indicator */
+.canvas.viewport-tablet::before,
+.canvas.viewport-mobile::before {
+    content: '';
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 4px 12px;
+    background: #3b82f6;
+    color: white;
+    font-size: 0.75rem;
+    border-radius: 4px;
+    z-index: 10;
+}
+
+.canvas.viewport-tablet::before {
+    content: 'Tablet - 768px';
+}
+
+.canvas.viewport-mobile::before {
+    content: 'Mobile - 375px';
+}
+
+/* ============================
+   TEMA APPLICATO AL CANVAS
+   ============================ */
+.canvas[data-theme] {
+    transition: background-color 0.3s ease;
+}
+
+.canvas[data-theme="dark"] {
+    background-color: #1f2937;
+}
+
+.canvas[data-theme="dark"] .canvas-block {
+    background: #374151;
+    border-color: #4b5563;
+    color: #f9fafb;
+}
+
+.canvas[data-theme="dark"] .block-header {
+    background: #4b5563;
+    border-color: #6b7280;
+}
+
+.canvas[data-theme="dark"] .block-type {
+    color: #e5e7eb;
+}
+
+.canvas[data-theme="dark"] .canvas-placeholder {
+    color: #9ca3af;
+    border-color: #4b5563;
+}
+
+.canvas[data-theme="professional"] .canvas-block {
+    border-color: #e2e8f0;
+}
+
+.canvas[data-theme="professional"] .block-header {
+    background: #f1f5f9;
+}
+
+.canvas[data-theme="creative"] {
+    background-color: #faf5ff;
+}
+
+.canvas[data-theme="creative"] .canvas-block {
+    border-color: #e9d5ff;
+}
+
+.canvas[data-theme="creative"] .block-header {
+    background: #f3e8ff;
+}
+
+.canvas[data-theme="creative"] .canvas-block.selected {
+    border-color: #7c3aed;
+    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.2);
+}
+
+.canvas[data-theme="minimal"] .canvas-block {
+    border-color: #e4e4e7;
+    border-radius: 4px;
+}
+
+.canvas[data-theme="minimal"] .block-header {
+    background: #fafafa;
+}
+
+/* ============================
+   ANIMAZIONI ON SCROLL
+   ============================ */
+
+/* Animation Info Badge */
+.block-anim-info {
+    background: #dbeafe;
+    color: #1d4ed8;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    margin-left: 8px;
+}
+
+/* Animation Controls */
+.animation-controls {
+    background: #f0f9ff;
+    border: 1px solid #bae6fd;
+    border-radius: 8px;
+    padding: 16px;
+}
+
+/* Blocchi con animazione - stato iniziale (nascosto) */
+.canvas-block.has-animation:not(.animated) {
+    opacity: 0;
+}
+
+/* Stato animato */
+.canvas-block.animated {
+    animation-fill-mode: forwards;
+}
+
+/* ============================
+   KEYFRAMES ANIMAZIONI
+   ============================ */
+
+/* Fade In */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.animate-fade-in {
+    animation-name: fadeIn;
+}
+
+/* Slide Up */
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(40px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-slide-up {
+    animation-name: slideUp;
+}
+
+/* Slide Down */
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-40px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-slide-down {
+    animation-name: slideDown;
+}
+
+/* Slide Left */
+@keyframes slideLeft {
+    from {
+        opacity: 0;
+        transform: translateX(40px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.animate-slide-left {
+    animation-name: slideLeft;
+}
+
+/* Slide Right */
+@keyframes slideRight {
+    from {
+        opacity: 0;
+        transform: translateX(-40px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.animate-slide-right {
+    animation-name: slideRight;
+}
+
+/* Zoom In */
+@keyframes zoomIn {
+    from {
+        opacity: 0;
+        transform: scale(0.8);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.animate-zoom-in {
+    animation-name: zoomIn;
+}
+
+/* Zoom Out */
+@keyframes zoomOut {
+    from {
+        opacity: 0;
+        transform: scale(1.2);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.animate-zoom-out {
+    animation-name: zoomOut;
+}
+
+/* Flip */
+@keyframes flip {
+    from {
+        opacity: 0;
+        transform: perspective(600px) rotateX(-60deg);
+    }
+    to {
+        opacity: 1;
+        transform: perspective(600px) rotateX(0deg);
+    }
+}
+
+.animate-flip {
+    animation-name: flip;
+}
+
+/* Bounce */
+@keyframes bounce {
+    0% {
+        opacity: 0;
+        transform: translateY(40px);
+    }
+    60% {
+        opacity: 1;
+        transform: translateY(-10px);
+    }
+    80% {
+        transform: translateY(5px);
+    }
+    100% {
+        transform: translateY(0);
+    }
+}
+
+.animate-bounce {
+    animation-name: bounce;
+}
+
+/* ============================
+   ANIMAZIONI PER PAGINE ESPORTATE
+   ============================ */
+
+/* Classe per elementi che aspettano l'animazione */
+.scroll-animate {
+    opacity: 0;
+}
+
+.scroll-animate.is-visible {
+    animation-fill-mode: forwards;
+}

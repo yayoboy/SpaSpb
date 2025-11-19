@@ -41,6 +41,22 @@ clean: ## Ferma e rimuove container, network e volumi
 	@echo "$(YELLOW)🧹 Pulizia completa...$(NC)"
 	@docker-compose down -v
 	@echo "$(GREEN)✓ Pulizia completata$(NC)"
+	@echo ""
+	@echo "$(YELLOW)⚠️  Il volume ./data è stato preservato$(NC)"
+	@echo "$(BLUE)ℹ️  Per rimuoverlo completamente: rm -rf ./data$(NC)"
+
+clean-all: ## Pulizia completa includendo il volume data/
+	@echo "$(RED)⚠️  ATTENZIONE: Questa operazione rimuoverà TUTTI i dati!$(NC)"
+	@read -p "Sei sicuro? (s/N): " -n 1 -r; \
+	echo; \
+	if [[ $$REPLY =~ ^[Ss]$$ ]]; then \
+		$(MAKE) clean; \
+		echo "$(YELLOW)🗑️  Rimozione volume data/...$(NC)"; \
+		rm -rf ./data; \
+		echo "$(GREEN)✓ Pulizia completa eseguita$(NC)"; \
+	else \
+		echo "$(BLUE)ℹ️  Operazione annullata$(NC)"; \
+	fi
 
 shell: ## Accedi alla shell del container
 	@echo "$(BLUE)💻 Accesso shell container...$(NC)"
@@ -49,7 +65,7 @@ shell: ## Accedi alla shell del container
 db-backup: ## Backup del database
 	@echo "$(BLUE)💾 Backup database...$(NC)"
 	@mkdir -p backups
-	@docker-compose exec -T spaspb cat /var/www/html/builder/db/data.db > backups/data_$(shell date +%Y%m%d_%H%M%S).db
+	@docker-compose exec -T spaspb cat /var/www/html/data/db/data.db > backups/data_$(shell date +%Y%m%d_%H%M%S).db
 	@echo "$(GREEN)✓ Backup salvato in backups/$(NC)"
 
 db-restore: ## Ripristina database (usa: make db-restore FILE=backups/data.db)
@@ -58,7 +74,7 @@ db-restore: ## Ripristina database (usa: make db-restore FILE=backups/data.db)
 		exit 1; \
 	fi
 	@echo "$(YELLOW)⚠️  Ripristino database da $(FILE)...$(NC)"
-	@cat $(FILE) | docker-compose exec -T spaspb tee /var/www/html/builder/db/data.db > /dev/null
+	@cat $(FILE) | docker-compose exec -T spaspb tee /var/www/html/data/db/data.db > /dev/null
 	@echo "$(GREEN)✓ Database ripristinato$(NC)"
 
 status: ## Mostra lo stato del container
@@ -73,19 +89,36 @@ info: ## Mostra informazioni sul setup
 	@echo "Username:     admin"
 	@echo "Password:     admin123"
 	@echo ""
-	@echo "Directory:"
-	@echo "  Database:   builder/db/"
-	@echo "  Uploads:    builder/uploads/"
-	@echo "  Assets:     assets/"
+	@echo "Volume unificato: ./data/ (limite 1GB)"
+	@echo "  Database:   data/db/"
+	@echo "  Uploads:    data/uploads/"
+	@echo "  Assets:     data/assets/"
+	@echo "  Export:     data/export/"
 	@echo ""
+	@echo "Comandi utili:"
+	@echo "  make check-space        - Verifica spazio utilizzato"
+	@echo "  make check-space-watch  - Monitor in tempo reale"
+	@echo ""
+
+setup-volume: ## Crea e configura il volume unificato da 1GB
+	@echo "$(BLUE)📦 Setup volume unificato...$(NC)"
+	@./scripts/setup-volume.sh
+	@echo ""
+
+check-space: ## Monitora l'uso dello spazio nel volume
+	@./scripts/monitor-space.sh
+
+check-space-watch: ## Monitora lo spazio in tempo reale
+	@./scripts/monitor-space.sh --watch
+
+check-space-json: ## Output JSON dello spazio utilizzato
+	@./scripts/monitor-space.sh --json
 
 install: ## Installa dipendenze e avvia (primo setup)
 	@echo "$(GREEN)🎨 Setup iniziale SpaSpb Page Builder$(NC)"
 	@echo "======================================"
 	@echo ""
-	@mkdir -p builder/db builder/uploads assets/css assets/img backups
-	@chmod -R 755 builder/db builder/uploads assets || true
-	@echo "$(GREEN)✓ Directory create$(NC)"
+	@$(MAKE) setup-volume
 	@echo ""
 	@$(MAKE) build
 	@echo ""

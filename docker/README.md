@@ -2,6 +2,20 @@
 
 Guida completa per eseguire SpaSpb Page Builder con Docker.
 
+## 💾 Volume Unificato da 1GB
+
+**Novità:** Tutti i dati persistenti (database, uploads, assets) sono salvati in un **unico volume da 1GB** in `./data/`:
+
+```bash
+# Prima installazione: crea automaticamente il volume
+make install
+
+# Monitora lo spazio utilizzato
+make check-space
+```
+
+Il volume è limitato a **1GB** per un utilizzo ottimale. Usa `make check-space` per monitorare l'uso dello spazio.
+
 ## 🚀 Quick Start
 
 ### Metodo 1: Script Automatico (Raccomandato)
@@ -31,7 +45,7 @@ make logs       # Mostra logs
 
 - **Docker** 20.10 o superiore
 - **Docker Compose** 2.0 o superiore (o plugin `docker compose`)
-- Almeno **500MB** di spazio libero
+- Almeno **1GB** di spazio libero (per il volume dati)
 
 ### Installazione Docker
 
@@ -95,20 +109,25 @@ Dopo l'avvio, accedi a:
 ### Comandi Make Disponibili
 
 ```bash
-make help           # Lista tutti i comandi
-make start          # Avvia il builder
-make stop           # Ferma il builder
-make restart        # Riavvia il builder
-make logs           # Mostra logs in tempo reale
-make status         # Mostra stato container
-make shell          # Accedi alla shell del container
-make build          # Rebuild immagine Docker
-make clean          # Rimuovi tutto (container, volumi, network)
-make db-backup      # Backup del database
-make db-restore     # Ripristina database
-make update         # Aggiorna con ultime modifiche
-make dev            # Avvia in modalità development
-make info           # Mostra informazioni setup
+make help               # Lista tutti i comandi
+make start              # Avvia il builder
+make stop               # Ferma il builder
+make restart            # Riavvia il builder
+make logs               # Mostra logs in tempo reale
+make status             # Mostra stato container
+make shell              # Accedi alla shell del container
+make build              # Rebuild immagine Docker
+make clean              # Rimuovi container/volumi (preserva ./data)
+make clean-all          # Rimuovi tutto incluso volume data/
+make db-backup          # Backup del database
+make db-restore         # Ripristina database
+make update             # Aggiorna con ultime modifiche
+make dev                # Avvia in modalità development
+make info               # Mostra informazioni setup
+make setup-volume       # Crea/configura volume unificato da 1GB
+make check-space        # Monitora uso spazio nel volume
+make check-space-watch  # Monitor spazio in tempo reale
+make check-space-json   # Output JSON dello spazio utilizzato
 ```
 
 ### Comandi Docker Compose
@@ -170,18 +189,59 @@ environment:
   - PHP_POST_MAX_SIZE=20M
 ```
 
-### Volumi Persistenti
+### Volume Unificato da 1GB
 
-I dati persistono automaticamente in:
+**Tutti i dati persistenti sono salvati in un unico volume da 1GB:**
 
-```yaml
-volumes:
-  - ./builder/db:/var/www/html/builder/db          # Database
-  - ./builder/uploads:/var/www/html/builder/uploads # Uploads
-  - ./assets:/var/www/html/assets                   # Assets
+```
+./data/                  # Volume unificato (limite consigliato: 1GB)
+├── db/                  # Database SQLite
+├── uploads/             # Immagini caricate
+├── assets/              # CSS e immagini esportate
+│   ├── css/
+│   └── img/
+└── export/              # File temporanei export
 ```
 
-Anche se elimini il container, i dati rimangono sul tuo sistema.
+Il volume è montato in `./data` e mappato internamente al container tramite symlink.
+Anche se elimini il container, tutti i dati rimangono sul tuo sistema.
+
+#### Gestione Volume
+
+```bash
+# Crea e configura il volume
+make setup-volume
+
+# Monitora lo spazio utilizzato
+make check-space
+
+# Monitor in tempo reale (aggiornamento continuo)
+make check-space-watch
+
+# Output JSON per script esterni
+make check-space-json
+```
+
+#### Limiti e Monitoraggio
+
+Il volume è configurato con un **limite consigliato di 1GB (1024MB)**:
+
+- ⚠️ **80-90%**: Considera di liberare spazio
+- 🚨 **>90%**: Critico, rimuovi file non necessari
+
+**Liberare spazio:**
+
+```bash
+# Pulisci file temporanei export
+rm -rf ./data/export/*
+
+# Rimuovi vecchi upload non utilizzati
+# (verifica prima nel builder quali immagini sono in uso!)
+
+# Backup e ripristino per compattare il database
+make db-backup
+# Poi se necessario ripristina
+```
 
 ## 🛠️ Sviluppo
 
@@ -238,11 +298,11 @@ tail -f /var/log/apache2/php_errors.log
 ### Backup Database
 
 ```bash
-# Con Make
+# Con Make (raccomandato)
 make db-backup
 
 # Manualmente
-docker-compose exec spaspb cat /var/www/html/builder/db/data.db > backup.db
+docker-compose exec spaspb cat /var/www/html/data/db/data.db > backup.db
 ```
 
 I backup vengono salvati in `backups/data_YYYYMMDD_HHMMSS.db`
@@ -250,28 +310,37 @@ I backup vengono salvati in `backups/data_YYYYMMDD_HHMMSS.db`
 ### Ripristino Database
 
 ```bash
-# Con Make
+# Con Make (raccomandato)
 make db-restore FILE=backups/data_20231118_120000.db
 
 # Manualmente
-cat backup.db | docker-compose exec -T spaspb tee /var/www/html/builder/db/data.db > /dev/null
+cat backup.db | docker-compose exec -T spaspb tee /var/www/html/data/db/data.db > /dev/null
 ```
 
-### Backup Completo
+### Backup Completo del Volume
 
 ```bash
-# Backup tutto (database + uploads + assets)
+# Backup dell'intero volume data/ (raccomandato)
+tar -czf backup_$(date +%Y%m%d).tar.gz ./data/
+
+# Oppure solo i file importanti
 tar -czf backup_$(date +%Y%m%d).tar.gz \
-  builder/db/ \
-  builder/uploads/ \
-  assets/
+  ./data/db/ \
+  ./data/uploads/ \
+  ./data/assets/
 ```
 
 ### Ripristino Completo
 
 ```bash
+# Ferma il container
+docker-compose stop
+
+# Ripristina il volume
 tar -xzf backup_20231118.tar.gz
-docker-compose restart
+
+# Riavvia
+docker-compose start
 ```
 
 ## 🐛 Troubleshooting
@@ -292,8 +361,11 @@ docker-compose logs spaspb
 ### Errore permessi
 
 ```bash
-# Linux/Mac: imposta permessi corretti
-chmod -R 755 builder/db builder/uploads assets
+# Linux/Mac: imposta permessi corretti sul volume
+chmod -R 755 ./data
+
+# Se necessario, imposta ownership (richiede sudo)
+sudo chown -R www-data:www-data ./data
 
 # Poi riavvia
 docker-compose restart
@@ -315,11 +387,28 @@ ports:
 # Ferma container
 docker-compose stop
 
+# Backup del database corrotto (per sicurezza)
+cp ./data/db/data.db ./data/db/data.db.broken
+
 # Elimina database
-rm builder/db/data.db
+rm ./data/db/data.db
 
 # Riavvia (verrà ricreato)
 docker-compose start
+```
+
+### Spazio volume esaurito
+
+```bash
+# Verifica l'uso dello spazio
+make check-space
+
+# Libera spazio da file temporanei
+rm -rf ./data/export/*
+
+# Considera backup e rimozione vecchi upload
+make db-backup
+# Poi rimuovi manualmente immagini non utilizzate da ./data/uploads/
 ```
 
 ### Reset completo
@@ -328,8 +417,14 @@ docker-compose start
 # Ferma tutto
 docker-compose down -v
 
-# Rimuovi database e uploads
-rm -rf builder/db/*.db builder/uploads/*
+# Backup preventivo (raccomandato!)
+tar -czf backup_before_reset.tar.gz ./data/
+
+# Rimuovi tutto il volume
+rm -rf ./data
+
+# Ricrea il volume
+make setup-volume
 
 # Riavvia
 docker-compose up -d
