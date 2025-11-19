@@ -5,9 +5,9 @@
  */
 
 // Autenticazione - CAMBIA QUESTI VALORI!
-define('AUTH_ENABLED', true); // Imposta a true per abilitare l'autenticazione
+define('AUTH_ENABLED', false); // Imposta a true per produzione!
 define('AUTH_USERNAME', 'admin'); // Cambia con il tuo username
-define('AUTH_PASSWORD', '$2y$10$rN6kLjXnLqR7m8cYvV5kPO6zJ8TjZxLqWfKKqJ1LmMqKJqJqJqJqJ'); // Hash di "admin123" - CAMBIA!
+define('AUTH_PASSWORD', '$2y$12$HHzsAbc4WSriK8tIlfCsoOVwEP72BmBZW38DBgev6JRy0Wdt435Hu'); // Hash di "admin123" - CAMBIA!
 
 // Per generare un nuovo hash:
 // php -r "echo password_hash('tuapassword', PASSWORD_DEFAULT);"
