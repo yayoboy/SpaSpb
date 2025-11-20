@@ -1934,3 +1934,200 @@ function doExport(format) {
     window.location.href = `?action=export&id=${id}&format=${format}`;
     closeExportModal();
 }
+
+/**
+ * Toggle Dark Mode
+ */
+function toggleDarkMode() {
+    document.body.classList.toggle('dark-mode');
+    
+    // Salva preferenza in localStorage
+    const isDark = document.body.classList.contains('dark-mode');
+    localStorage.setItem('spaspb-dark-mode', isDark ? 'true' : 'false');
+    
+    // Aggiorna icona del bottone
+    const btn = document.getElementById('btn-dark-mode');
+    if (btn) {
+        if (isDark) {
+            btn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="5"/>
+                <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+            </svg>`;
+        } else {
+            btn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+            </svg>`;
+        }
+    }
+    
+    showNotification(isDark ? 'Dark mode attivato' : 'Light mode attivato', 'info');
+}
+
+/**
+ * Carica preferenza dark mode da localStorage
+ */
+function loadDarkModePreference() {
+    const isDark = localStorage.getItem('spaspb-dark-mode') === 'true';
+    if (isDark) {
+        document.body.classList.add('dark-mode');
+        const btn = document.getElementById('btn-dark-mode');
+        if (btn) {
+            btn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="5"/>
+                <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+            </svg>`;
+        }
+    }
+}
+
+// Carica preferenza dark mode all'avvio
+document.addEventListener('DOMContentLoaded', loadDarkModePreference);
+
+/**
+ * Abilita inline editing per un blocco
+ */
+function enableInlineEdit(blockId) {
+    const blockEl = document.querySelector(`.canvas-block[data-id="${blockId}"]`);
+    if (!blockEl) return;
+
+    const contentEl = blockEl.querySelector('.block-content');
+    if (!contentEl) return;
+
+    // Trova il blocco nei dati
+    const block = blocks.find(b => b.id === blockId);
+    if (!block) return;
+
+    // Non permettere inline edit per alcuni tipi
+    const noInlineEdit = ['image', 'gallery', 'video', 'countdown'];
+    if (noInlineEdit.includes(block.type)) {
+        showNotification('Usa il pannello proprietà per questo blocco', 'info');
+        return;
+    }
+
+    // Abilita editing
+    contentEl.setAttribute('contenteditable', 'true');
+    contentEl.classList.add('block-content-editable');
+    blockEl.classList.add('editing');
+    contentEl.focus();
+
+    // Seleziona tutto il contenuto
+    const range = document.createRange();
+    range.selectNodeContents(contentEl);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+
+    // Crea toolbar inline
+    createInlineToolbar(blockEl);
+
+    // Event listeners
+    contentEl.addEventListener('blur', function onBlur() {
+        saveInlineEdit(blockId, contentEl.innerHTML);
+        disableInlineEdit(blockEl, contentEl);
+        contentEl.removeEventListener('blur', onBlur);
+    });
+
+    contentEl.addEventListener('keydown', function onKeydown(e) {
+        if (e.key === 'Escape') {
+            // Annulla modifiche
+            contentEl.innerHTML = block.content;
+            disableInlineEdit(blockEl, contentEl);
+            contentEl.removeEventListener('keydown', onKeydown);
+            e.preventDefault();
+        }
+        if (e.key === 'Enter' && !e.shiftKey) {
+            // Salva con Enter (Shift+Enter per nuovo paragrafo)
+            contentEl.blur();
+            e.preventDefault();
+        }
+    });
+}
+
+/**
+ * Disabilita inline editing
+ */
+function disableInlineEdit(blockEl, contentEl) {
+    contentEl.removeAttribute('contenteditable');
+    contentEl.classList.remove('block-content-editable');
+    blockEl.classList.remove('editing');
+
+    // Rimuovi toolbar
+    const toolbar = blockEl.querySelector('.inline-toolbar');
+    if (toolbar) toolbar.remove();
+}
+
+/**
+ * Salva contenuto inline
+ */
+function saveInlineEdit(blockId, newContent) {
+    const block = blocks.find(b => b.id === blockId);
+    if (!block) return;
+
+    if (block.content !== newContent) {
+        block.content = newContent;
+        saveToHistory();
+        autoSave();
+        showNotification('Contenuto salvato', 'success');
+    }
+}
+
+/**
+ * Crea toolbar inline per formattazione
+ */
+function createInlineToolbar(blockEl) {
+    // Rimuovi toolbar esistente
+    const existing = blockEl.querySelector('.inline-toolbar');
+    if (existing) existing.remove();
+
+    const toolbar = document.createElement('div');
+    toolbar.className = 'inline-toolbar';
+    toolbar.innerHTML = `
+        <button onclick="formatText('bold')" title="Grassetto (Ctrl+B)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                <path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/>
+                <path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/>
+            </svg>
+        </button>
+        <button onclick="formatText('italic')" title="Corsivo (Ctrl+I)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="19" y1="4" x2="10" y2="4"/>
+                <line x1="14" y1="20" x2="5" y2="20"/>
+                <line x1="15" y1="4" x2="9" y2="20"/>
+            </svg>
+        </button>
+        <button onclick="formatText('underline')" title="Sottolineato (Ctrl+U)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M6 3v7a6 6 0 0 0 6 6 6 6 0 0 0 6-6V3"/>
+                <line x1="4" y1="21" x2="20" y2="21"/>
+            </svg>
+        </button>
+        <button onclick="formatText('insertUnorderedList')" title="Lista puntata">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="8" y1="6" x2="21" y2="6"/>
+                <line x1="8" y1="12" x2="21" y2="12"/>
+                <line x1="8" y1="18" x2="21" y2="18"/>
+                <line x1="3" y1="6" x2="3.01" y2="6"/>
+                <line x1="3" y1="12" x2="3.01" y2="12"/>
+                <line x1="3" y1="18" x2="3.01" y2="18"/>
+            </svg>
+        </button>
+    `;
+
+    blockEl.appendChild(toolbar);
+}
+
+/**
+ * Formatta testo selezionato
+ */
+function formatText(command) {
+    document.execCommand(command, false, null);
+}
+
+// Aggiungi double-click per inline editing
+document.addEventListener('dblclick', function(e) {
+    const blockEl = e.target.closest('.canvas-block');
+    if (blockEl) {
+        const blockId = blockEl.dataset.id;
+        enableInlineEdit(blockId);
+    }
+});

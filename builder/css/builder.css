@@ -1742,3 +1742,253 @@ textarea.form-control {
     0% { background-position: 200% 0; }
     100% { background-position: -200% 0; }
 }
+
+/* ============================
+   DARK MODE
+   ============================ */
+.dark-mode {
+    --bg-primary: #0f172a;
+    --bg-secondary: #1e293b;
+    --bg-tertiary: #334155;
+    --text-primary: #f1f5f9;
+    --text-secondary: #94a3b8;
+    --border-color: #475569;
+}
+
+body.dark-mode {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+}
+
+.dark-mode .editor-sidebar {
+    background: var(--bg-secondary);
+    border-color: var(--border-color);
+}
+
+.dark-mode .sidebar-header {
+    border-color: var(--border-color);
+}
+
+.dark-mode .sidebar-header h2 {
+    color: var(--text-primary);
+}
+
+.dark-mode .block-item {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    border-color: var(--border-color);
+}
+
+.dark-mode .block-item:hover {
+    background: var(--primary);
+    border-color: var(--primary);
+}
+
+.dark-mode .editor-toolbar {
+    background: var(--bg-secondary);
+    border-color: var(--border-color);
+}
+
+.dark-mode .canvas {
+    background: var(--bg-tertiary);
+}
+
+.dark-mode .canvas-block {
+    background: var(--bg-secondary);
+    border-color: var(--border-color);
+}
+
+.dark-mode .canvas-block:hover {
+    border-color: var(--gray-500);
+}
+
+.dark-mode .canvas-block .block-type {
+    color: var(--text-secondary);
+}
+
+.dark-mode .properties-panel {
+    background: var(--bg-secondary);
+    border-color: var(--border-color);
+}
+
+.dark-mode .properties-header {
+    border-color: var(--border-color);
+}
+
+.dark-mode .properties-header h3 {
+    color: var(--text-primary);
+}
+
+.dark-mode .property-group label {
+    color: var(--text-secondary);
+}
+
+.dark-mode .form-control {
+    background: var(--bg-tertiary);
+    border-color: var(--border-color);
+    color: var(--text-primary);
+}
+
+.dark-mode .form-control:focus {
+    border-color: var(--primary);
+}
+
+.dark-mode .page-title-input {
+    background: var(--bg-tertiary);
+    border-color: var(--border-color);
+    color: var(--text-primary);
+}
+
+.dark-mode .ui-library-select,
+.dark-mode .theme-selector select {
+    background: var(--bg-tertiary);
+    border-color: var(--border-color);
+    color: var(--text-primary);
+}
+
+.dark-mode .btn-secondary {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+}
+
+.dark-mode .btn-secondary:hover {
+    background: var(--gray-600);
+}
+
+.dark-mode .responsive-buttons {
+    background: var(--bg-tertiary);
+}
+
+.dark-mode .responsive-buttons button {
+    color: var(--text-secondary);
+}
+
+.dark-mode .responsive-buttons button.active {
+    background: var(--primary);
+    color: white;
+}
+
+.dark-mode .grid-container {
+    background: var(--bg-primary);
+}
+
+.dark-mode .canvas-placeholder {
+    color: var(--text-secondary);
+    border-color: var(--border-color);
+}
+
+/* Dark mode toggle button */
+.dark-mode-toggle {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: var(--radius-sm);
+    color: var(--gray-600);
+    transition: var(--transition);
+}
+
+.dark-mode-toggle:hover {
+    background: var(--gray-100);
+}
+
+.dark-mode .dark-mode-toggle {
+    color: var(--text-secondary);
+}
+
+.dark-mode .dark-mode-toggle:hover {
+    background: var(--bg-tertiary);
+}
+
+/* ============================
+   INLINE EDITING
+   ============================ */
+.block-content-editable {
+    outline: none;
+    cursor: text;
+}
+
+.block-content-editable:focus {
+    background: rgba(255, 255, 255, 0.95);
+    box-shadow: inset 0 0 0 2px var(--primary);
+    border-radius: var(--radius-sm);
+    padding: 8px;
+}
+
+.dark-mode .block-content-editable:focus {
+    background: rgba(30, 41, 59, 0.95);
+}
+
+.inline-edit-hint {
+    position: absolute;
+    bottom: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--gray-800);
+    color: white;
+    padding: 4px 8px;
+    border-radius: var(--radius-sm);
+    font-size: 11px;
+    opacity: 0;
+    transition: opacity 0.2s;
+    pointer-events: none;
+    white-space: nowrap;
+}
+
+.canvas-block:hover .inline-edit-hint {
+    opacity: 0.8;
+}
+
+.canvas-block.editing .inline-edit-hint {
+    opacity: 0;
+}
+
+.canvas-block.editing {
+    z-index: 10;
+}
+
+/* Toolbar contestuale */
+.inline-toolbar {
+    position: absolute;
+    top: -44px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--gray-800);
+    border-radius: var(--radius-md);
+    padding: 4px;
+    display: flex;
+    gap: 2px;
+    box-shadow: var(--shadow-lg);
+    z-index: 100;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+}
+
+.canvas-block.editing .inline-toolbar {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.inline-toolbar button {
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: transparent;
+    color: white;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
+}
+
+.inline-toolbar button:hover {
+    background: var(--gray-700);
+}
+
+.inline-toolbar button.active {
+    background: var(--primary);
+}
