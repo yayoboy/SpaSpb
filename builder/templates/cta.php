@@ -7,7 +7,7 @@ $textColor = $settings['textColor'] ?? '#ffffff';
 $buttonText = $settings['buttonText'] ?? 'Inizia ora';
 $buttonLink = $settings['buttonLink'] ?? '#';
 
-$style = "background-color: {$bgColor}; color: {$textColor};";
+$style = "background-color: " . htmlspecialchars($bgColor) . "; color: " . htmlspecialchars($textColor) . ";";
 
 $classes = match($uiLibrary) {
     'bootstrap' => 'cta-block py-5 text-center',
@@ -20,7 +20,7 @@ $classes = match($uiLibrary) {
 $buttonClasses = match($uiLibrary) {
     'bootstrap' => 'btn btn-light btn-lg mt-3',
     'tailwind' => 'inline-block mt-6 bg-white text-gray-900 px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition',
-    'shadcn' => 'inline-block mt-6 bg-white text-gray-900 px-8 py-3 rounded-md font-semibold hover:bg-gray-100 transition',
+    'shadcn' => 'inline-flex items-center justify-center mt-6 bg-white text-gray-900 px-8 py-3 rounded-md font-medium hover:bg-gray-100 transition-colors',
     'bulma' => 'button is-light is-large mt-4',
     default => 'cta-button'
 };
@@ -37,7 +37,22 @@ $buttonClasses = match($uiLibrary) {
                     </a>
                 </div>
             </div>
+        <?php elseif ($uiLibrary === 'bulma'): ?>
+            <div class="container">
+                <?= $content ?>
+                <a href="<?= htmlspecialchars($buttonLink) ?>" class="<?= $buttonClasses ?>">
+                    <?= htmlspecialchars($buttonText) ?>
+                </a>
+            </div>
+        <?php elseif ($uiLibrary === 'shadcn'): ?>
+            <div class="max-w-3xl mx-auto">
+                <?= $content ?>
+                <a href="<?= htmlspecialchars($buttonLink) ?>" class="<?= $buttonClasses ?>">
+                    <?= htmlspecialchars($buttonText) ?>
+                </a>
+            </div>
         <?php else: ?>
+            <!-- Tailwind -->
             <div class="max-w-3xl mx-auto">
                 <?= $content ?>
                 <a href="<?= htmlspecialchars($buttonLink) ?>" class="<?= $buttonClasses ?>">

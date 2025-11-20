@@ -284,7 +284,7 @@ function getDefaultSettings(type) {
             ...gridDefaults,
             images: [],
             columns: 3,
-            gap: '20px'
+            gap: 'medium'
         },
         cta: {
             ...gridDefaults,
@@ -470,9 +470,10 @@ function renderBlockPreview(block) {
             break;
         case 'gallery':
             if (settings.images && settings.images.length > 0) {
-                preview += `<div style="display: grid; grid-template-columns: repeat(${settings.columns}, 1fr); gap: 10px;">`;
+                const gapPx = settings.gap === 'small' ? '5px' : settings.gap === 'large' ? '20px' : '10px';
+                preview += `<div style="display: grid; grid-template-columns: repeat(${Math.min(settings.columns, 4)}, 1fr); gap: ${gapPx};">`;
                 settings.images.forEach(img => {
-                    preview += `<img src="${img}" style="width: 100%; height: 100px; object-fit: cover;">`;
+                    preview += `<img src="${img}" style="width: 100%; height: 100px; object-fit: cover; border-radius: 4px;">`;
                 });
                 preview += '</div>';
             } else {
@@ -715,6 +716,33 @@ function renderBlockSettings(block) {
             `;
             break;
 
+        case 'gallery':
+            html += `
+                <div class="property-group">
+                    <label>Colonne</label>
+                    <select id="setting-columns" class="form-control">
+                        <option value="1" ${block.settings.columns == 1 ? 'selected' : ''}>1 colonna</option>
+                        <option value="2" ${block.settings.columns == 2 ? 'selected' : ''}>2 colonne</option>
+                        <option value="3" ${block.settings.columns == 3 ? 'selected' : ''}>3 colonne</option>
+                        <option value="4" ${block.settings.columns == 4 ? 'selected' : ''}>4 colonne</option>
+                        <option value="6" ${block.settings.columns == 6 ? 'selected' : ''}>6 colonne</option>
+                    </select>
+                </div>
+                <div class="property-group">
+                    <label>Spaziatura</label>
+                    <select id="setting-gap" class="form-control">
+                        <option value="small" ${block.settings.gap === 'small' ? 'selected' : ''}>Piccola</option>
+                        <option value="medium" ${block.settings.gap === 'medium' ? 'selected' : ''}>Media</option>
+                        <option value="large" ${block.settings.gap === 'large' ? 'selected' : ''}>Grande</option>
+                    </select>
+                </div>
+                <div class="property-group">
+                    <label>Aggiungi Immagini</label>
+                    <input type="file" id="gallery-upload" class="form-control" accept="image/*" multiple onchange="uploadGalleryImages(this)">
+                </div>
+            `;
+            break;
+
         case 'cta':
             html += `
                 <div class="property-group">
@@ -891,6 +919,56 @@ function uploadImage(input) {
     .catch(err => {
         alert('Errore nel caricamento');
     });
+}
+
+/**
+ * Upload multiple immagini per galleria
+ */
+function uploadGalleryImages(input) {
+    if (!input.files || input.files.length === 0) return;
+    if (!selectedBlockId) return;
+
+    const block = blocks.find(b => b.id === selectedBlockId);
+    if (!block || block.type !== 'gallery') return;
+
+    const uploads = [];
+    const totalFiles = input.files.length;
+    let completedUploads = 0;
+
+    for (let i = 0; i < input.files.length; i++) {
+        const formData = new FormData();
+        formData.append('image', input.files[i]);
+
+        uploads.push(
+            fetch('?action=api_upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    if (!block.settings.images) {
+                        block.settings.images = [];
+                    }
+                    block.settings.images.push(data.url);
+                    completedUploads++;
+                }
+                return data;
+            })
+        );
+    }
+
+    Promise.all(uploads).then(() => {
+        renderCanvas();
+        showProperties(block);
+        autoSave();
+        showNotification(`${completedUploads} immagini caricate!`);
+    }).catch(err => {
+        alert('Errore nel caricamento delle immagini');
+    });
+
+    // Reset input
+    input.value = '';
 }
 
 /**
