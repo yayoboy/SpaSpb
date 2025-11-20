@@ -335,7 +335,7 @@ function showDashboard($db) {
                             <div class="page-card-actions">
                                 <a href="?action=edit&id=<?= $page['id'] ?>" class="btn btn-sm">Modifica</a>
                                 <a href="?action=duplicate&id=<?= $page['id'] ?>" class="btn btn-sm btn-secondary">Duplica</a>
-                                <a href="?action=export&id=<?= $page['id'] ?>" class="btn btn-sm btn-success">Esporta</a>
+                                <button onclick="showExportModal(<?= $page['id'] ?>)" class="btn btn-sm btn-success">Esporta</button>
                                 <button onclick="deletePage(<?= $page['id'] ?>)" class="btn btn-sm btn-danger">Elimina</button>
                             </div>
                         </div>
@@ -344,8 +344,55 @@ function showDashboard($db) {
             </div>
         </div>
 
+        <!-- Export Modal -->
+        <div id="export-modal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Esporta Pagina</h3>
+                    <button onclick="closeExportModal()" class="modal-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p>Scegli il formato di esportazione:</p>
+                    <div class="export-options">
+                        <button onclick="exportPage('html')" class="export-option">
+                            <span class="export-icon">🌐</span>
+                            <span class="export-title">HTML Standard</span>
+                            <span class="export-desc">Esporta nella cartella root</span>
+                        </button>
+                        <button onclick="exportPage('minified')" class="export-option">
+                            <span class="export-icon">⚡</span>
+                            <span class="export-title">HTML Minificato</span>
+                            <span class="export-desc">HTML ottimizzato e compresso</span>
+                        </button>
+                        <button onclick="exportPage('zip')" class="export-option">
+                            <span class="export-icon">📦</span>
+                            <span class="export-title">Download ZIP</span>
+                            <span class="export-desc">Pacchetto completo con assets</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <script>
         const CSRF_TOKEN = '<?= getCsrfToken() ?>';
+        let currentExportId = null;
+
+        function showExportModal(id) {
+            currentExportId = id;
+            document.getElementById('export-modal').style.display = 'flex';
+        }
+
+        function closeExportModal() {
+            document.getElementById('export-modal').style.display = 'none';
+            currentExportId = null;
+        }
+
+        function exportPage(format) {
+            if (!currentExportId) return;
+            window.location.href = `?action=export&id=${currentExportId}&format=${format}`;
+            closeExportModal();
+        }
 
         function deletePage(id) {
             if (!confirm('Sei sicuro di voler eliminare questa pagina?')) return;
@@ -366,6 +413,11 @@ function showDashboard($db) {
                 }
             });
         }
+
+        // Close modal on outside click
+        document.getElementById('export-modal').addEventListener('click', function(e) {
+            if (e.target === this) closeExportModal();
+        });
         </script>
     </body>
     </html>
@@ -557,7 +609,7 @@ function showEditor($db) {
                         <button id="btn-redo" class="btn btn-secondary" onclick="redo()" title="Ripristina (Ctrl+Y)" style="opacity: 0.5;">↪️</button>
                         <button id="btn-preview" class="btn btn-secondary">👁️</button>
                         <button id="btn-save" class="btn btn-primary">💾</button>
-                        <a href="?action=export&id=<?= $id ?>" class="btn btn-success">📤</a>
+                        <button onclick="showExportModal(<?= $id ?>)" class="btn btn-success">📤</button>
                     </div>
                 </div>
 
@@ -799,6 +851,7 @@ function apiPreviewPage($db) {
  */
 function exportPage($db) {
     $id = $_GET['id'] ?? 0;
+    $format = $_GET['format'] ?? 'html'; // html, zip, minified
 
     $stmt = $db->prepare("SELECT * FROM pages WHERE id = ?");
     $stmt->bindValue(1, $id, SQLITE3_INTEGER);
@@ -814,6 +867,17 @@ function exportPage($db) {
 
     // Genera HTML
     $html = generateHTML($page['title'], $blocks, $uiLibrary);
+
+    // Applica minificazione se richiesta
+    if ($format === 'minified' || $format === 'zip') {
+        $html = minifyHTML($html);
+    }
+
+    // Export come ZIP
+    if ($format === 'zip') {
+        exportAsZip($page, $html, $blocks);
+        return;
+    }
 
     // Salva index.html nella root
     $indexPath = EXPORT_DIR . '/index.html';
@@ -840,6 +904,131 @@ function exportPage($db) {
     // Redirect al sito esportato
     header("Location: ../index.html");
     exit;
+}
+
+/**
+ * Minifica HTML rimuovendo spazi e commenti non necessari
+ */
+function minifyHTML($html) {
+    // Rimuovi commenti HTML (tranne conditional comments)
+    $html = preg_replace('/<!--(?!\s*\[if).*?-->/s', '', $html);
+
+    // Rimuovi spazi tra tag
+    $html = preg_replace('/>\s+</', '><', $html);
+
+    // Rimuovi spazi multipli
+    $html = preg_replace('/\s+/', ' ', $html);
+
+    // Rimuovi spazi attorno ai tag di apertura/chiusura
+    $html = preg_replace('/\s*(<[^>]+>)\s*/', '$1', $html);
+
+    // Ripristina spazi necessari nel testo
+    $html = preg_replace('/<\/?(p|h[1-6]|div|section|header|footer|nav|article|aside|li|td|th)>/', "$0 ", $html);
+
+    return trim($html);
+}
+
+/**
+ * Esporta come file ZIP con tutti gli assets
+ */
+function exportAsZip($page, $html, $blocks) {
+    $zipName = 'export_' . preg_replace('/[^a-z0-9]/i', '_', $page['title']) . '_' . date('Ymd_His') . '.zip';
+    $zipPath = __DIR__ . '/export/' . $zipName;
+
+    // Crea directory export se non esiste
+    if (!is_dir(__DIR__ . '/export')) {
+        mkdir(__DIR__ . '/export', 0755, true);
+    }
+
+    $zip = new ZipArchive();
+    if ($zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== TRUE) {
+        die("Impossibile creare il file ZIP");
+    }
+
+    // Aggiungi index.html
+    $zip->addFromString('index.html', $html);
+
+    // Aggiungi CSS
+    $cssSource = __DIR__ . '/css/theme.css';
+    if (file_exists($cssSource)) {
+        $css = file_get_contents($cssSource);
+        // Minifica CSS
+        $css = preg_replace('/\/\*.*?\*\//s', '', $css); // Rimuovi commenti
+        $css = preg_replace('/\s+/', ' ', $css); // Riduci spazi
+        $css = preg_replace('/\s*([{}:;,])\s*/', '$1', $css); // Rimuovi spazi attorno a simboli
+        $zip->addFromString('assets/css/style.css', $css);
+    }
+
+    // Aggiungi immagini
+    $imagesAdded = [];
+    foreach ($blocks as $block) {
+        $settings = $block['settings'] ?? [];
+
+        // Immagine singola
+        if (!empty($settings['image'])) {
+            $imgPath = getImagePath($settings['image']);
+            if ($imgPath && file_exists($imgPath) && !in_array($imgPath, $imagesAdded)) {
+                $zip->addFile($imgPath, 'assets/img/' . basename($imgPath));
+                $imagesAdded[] = $imgPath;
+            }
+        }
+
+        // Galleria
+        if (!empty($settings['images']) && is_array($settings['images'])) {
+            foreach ($settings['images'] as $img) {
+                $imgPath = getImagePath($img);
+                if ($imgPath && file_exists($imgPath) && !in_array($imgPath, $imagesAdded)) {
+                    $zip->addFile($imgPath, 'assets/img/' . basename($imgPath));
+                    $imagesAdded[] = $imgPath;
+                }
+            }
+        }
+
+        // Background image
+        if (!empty($settings['backgroundImage'])) {
+            $imgPath = getImagePath($settings['backgroundImage']);
+            if ($imgPath && file_exists($imgPath) && !in_array($imgPath, $imagesAdded)) {
+                $zip->addFile($imgPath, 'assets/img/' . basename($imgPath));
+                $imagesAdded[] = $imgPath;
+            }
+        }
+
+        // Logo image
+        if (!empty($settings['logoImage'])) {
+            $imgPath = getImagePath($settings['logoImage']);
+            if ($imgPath && file_exists($imgPath) && !in_array($imgPath, $imagesAdded)) {
+                $zip->addFile($imgPath, 'assets/img/' . basename($imgPath));
+                $imagesAdded[] = $imgPath;
+            }
+        }
+    }
+
+    // Aggiungi README
+    $readme = "# {$page['title']}\n\nExported from SpaSpb Page Builder\nDate: " . date('Y-m-d H:i:s') . "\nUI Library: {$page['ui_library']}\n\n## Usage\nOpen index.html in a browser to view the page.\n";
+    $zip->addFromString('README.md', $readme);
+
+    $zip->close();
+
+    // Download
+    header('Content-Type: application/zip');
+    header('Content-Disposition: attachment; filename="' . $zipName . '"');
+    header('Content-Length: ' . filesize($zipPath));
+    header('Cache-Control: no-cache, must-revalidate');
+    readfile($zipPath);
+
+    // Pulisci
+    unlink($zipPath);
+    exit;
+}
+
+/**
+ * Estrae il percorso locale da URL immagine
+ */
+function getImagePath($url) {
+    if (strpos($url, 'uploads/') !== false) {
+        return __DIR__ . '/uploads/' . basename($url);
+    }
+    return null;
 }
 
 /**

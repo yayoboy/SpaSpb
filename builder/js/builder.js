@@ -1831,3 +1831,73 @@ function resetAnimations() {
     initAnimationObserver();
     showNotification('Animazioni resettate');
 }
+
+/**
+ * Mostra modal di export
+ */
+function showExportModal(id) {
+    // Crea modal se non esiste
+    let modal = document.getElementById('export-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'export-modal';
+        modal.className = 'modal';
+        modal.style.display = 'none';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Esporta Pagina</h3>
+                    <button onclick="closeExportModal()" class="modal-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p>Scegli il formato di esportazione:</p>
+                    <div class="export-options">
+                        <button onclick="doExport('html')" class="export-option">
+                            <span class="export-icon">🌐</span>
+                            <span class="export-title">HTML Standard</span>
+                            <span class="export-desc">Esporta nella cartella root</span>
+                        </button>
+                        <button onclick="doExport('minified')" class="export-option">
+                            <span class="export-icon">⚡</span>
+                            <span class="export-title">HTML Minificato</span>
+                            <span class="export-desc">HTML ottimizzato e compresso</span>
+                        </button>
+                        <button onclick="doExport('zip')" class="export-option">
+                            <span class="export-icon">📦</span>
+                            <span class="export-title">Download ZIP</span>
+                            <span class="export-desc">Pacchetto completo con assets</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        // Chiudi su click esterno
+        modal.addEventListener('click', function(e) {
+            if (e.target === this) closeExportModal();
+        });
+    }
+
+    window.currentExportId = id || PAGE_ID;
+    modal.style.display = 'flex';
+}
+
+/**
+ * Chiudi modal export
+ */
+function closeExportModal() {
+    const modal = document.getElementById('export-modal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+/**
+ * Esegui export
+ */
+function doExport(format) {
+    const id = window.currentExportId || PAGE_ID;
+    window.location.href = `?action=export&id=${id}&format=${format}`;
+    closeExportModal();
+}
