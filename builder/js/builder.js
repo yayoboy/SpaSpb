@@ -1051,13 +1051,35 @@ function autoSave() {
  * Anteprima pagina
  */
 function previewPage() {
-    // Salva prima
-    savePage();
+    const title = document.getElementById('page-title').value;
+    const uiLibrary = document.getElementById('ui-library').value;
 
-    // Apri in nuova finestra
-    setTimeout(() => {
-        window.open(`?action=export&id=${PAGE_ID}&preview=1`, '_blank');
-    }, 500);
+    // Crea form per POST
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = `?action=api_preview&id=${PAGE_ID}`;
+    form.target = '_blank';
+
+    // Aggiungi campi nascosti
+    const fields = {
+        id: PAGE_ID,
+        title: title,
+        blocks: JSON.stringify(blocks),
+        ui_library: uiLibrary
+    };
+
+    for (const [key, value] of Object.entries(fields)) {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = key;
+        input.value = value;
+        form.appendChild(input);
+    }
+
+    // Invia form
+    document.body.appendChild(form);
+    form.submit();
+    document.body.removeChild(form);
 }
 
 /**

@@ -124,6 +124,11 @@ switch ($action) {
         showEditor($db);
         break;
 
+    case 'duplicate':
+        requireAuth();
+        duplicatePage($db);
+        break;
+
     case 'api_save':
         requireAuth();
         apiSavePage($db);
@@ -142,6 +147,11 @@ switch ($action) {
     case 'api_upload':
         requireAuth();
         apiUploadImage();
+        break;
+
+    case 'api_preview':
+        requireAuth();
+        apiPreviewPage($db);
         break;
 
     case 'export':
@@ -324,6 +334,7 @@ function showDashboard($db) {
                             </div>
                             <div class="page-card-actions">
                                 <a href="?action=edit&id=<?= $page['id'] ?>" class="btn btn-sm">Modifica</a>
+                                <a href="?action=duplicate&id=<?= $page['id'] ?>" class="btn btn-sm btn-secondary">Duplica</a>
                                 <a href="?action=export&id=<?= $page['id'] ?>" class="btn btn-sm btn-success">Esporta</a>
                                 <button onclick="deletePage(<?= $page['id'] ?>)" class="btn btn-sm btn-danger">Elimina</button>
                             </div>
@@ -378,6 +389,39 @@ function createNewPage($db) {
 
     $id = $db->lastInsertRowID();
     header("Location: ?action=edit&id={$id}");
+    exit;
+}
+
+/**
+ * Duplica una pagina esistente
+ */
+function duplicatePage($db) {
+    $id = $_GET['id'] ?? 0;
+
+    // Carica pagina originale
+    $stmt = $db->prepare("SELECT * FROM pages WHERE id = ?");
+    $stmt->bindValue(1, $id, SQLITE3_INTEGER);
+    $result = $stmt->execute();
+    $page = $result->fetchArray(SQLITE3_ASSOC);
+
+    if (!$page) {
+        header("Location: ?action=dashboard");
+        exit;
+    }
+
+    // Crea copia
+    $title = $page['title'] . ' (Copia)';
+    $slug = 'page-' . time();
+
+    $stmt = $db->prepare("INSERT INTO pages (title, slug, ui_library, blocks) VALUES (?, ?, ?, ?)");
+    $stmt->bindValue(1, $title, SQLITE3_TEXT);
+    $stmt->bindValue(2, $slug, SQLITE3_TEXT);
+    $stmt->bindValue(3, $page['ui_library'], SQLITE3_TEXT);
+    $stmt->bindValue(4, $page['blocks'], SQLITE3_TEXT);
+    $stmt->execute();
+
+    $newId = $db->lastInsertRowID();
+    header("Location: ?action=edit&id={$newId}");
     exit;
 }
 
@@ -687,6 +731,47 @@ function apiUploadImage() {
     } else {
         echo json_encode(['success' => false, 'error' => 'Errore nel salvataggio del file']);
     }
+}
+
+/**
+ * API: Genera anteprima pagina (senza salvare)
+ */
+function apiPreviewPage($db) {
+    $id = $_POST['id'] ?? $_GET['id'] ?? 0;
+    $blocks = $_POST['blocks'] ?? null;
+    $uiLibrary = $_POST['ui_library'] ?? 'tailwind';
+    $title = $_POST['title'] ?? 'Anteprima';
+
+    // Se blocks non sono forniti via POST, carica dal database
+    if ($blocks === null) {
+        $stmt = $db->prepare("SELECT * FROM pages WHERE id = ?");
+        $stmt->bindValue(1, $id, SQLITE3_INTEGER);
+        $result = $stmt->execute();
+        $page = $result->fetchArray(SQLITE3_ASSOC);
+
+        if (!$page) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'error' => 'Pagina non trovata']);
+            return;
+        }
+
+        $blocks = $page['blocks'];
+        $uiLibrary = $page['ui_library'];
+        $title = $page['title'];
+    }
+
+    // Decodifica blocchi se sono una stringa JSON
+    if (is_string($blocks)) {
+        $blocks = json_decode($blocks, true) ?: [];
+    }
+
+    // Genera HTML
+    $html = generateHTML($title, $blocks, $uiLibrary);
+
+    // Restituisci come HTML diretto (per iframe/nuova finestra)
+    header('Content-Type: text/html; charset=utf-8');
+    echo $html;
+    exit;
 }
 
 /**
