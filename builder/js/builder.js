@@ -233,9 +233,14 @@ function getDefaultContent(type) {
         cta: '<h2>Call to Action</h2><p>Descrizione della CTA</p>',
         features: '<h2>Le nostre Features</h2>',
         contact: '<h2>Contattaci</h2><p>Invia un messaggio</p>',
-        video: '<h2>Video</h2><p>Guarda il nostro video</p>',
+        video: '',
         tabs: '',
-        countdown: '<h2>Prossimo Evento</h2><p>Non perdere questa occasione!</p>'
+        countdown: '<h2>Prossimo Evento</h2><p>Non perdere questa occasione!</p>',
+        header: '',
+        footer: '',
+        faq: '',
+        testimonials: '',
+        pricing: ''
     };
 
     return defaults[type] || '';
@@ -328,6 +333,116 @@ function getDefaultSettings(type) {
             targetDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
             backgroundColor: '#1f2937',
             textColor: '#ffffff'
+        },
+        header: {
+            ...gridDefaults,
+            backgroundColor: '#ffffff',
+            textColor: '#1f2937',
+            logoText: 'Brand',
+            logoImage: '',
+            sticky: false,
+            transparent: false,
+            menuItems: [
+                { label: 'Home', url: '#' },
+                { label: 'Features', url: '#features' },
+                { label: 'Pricing', url: '#pricing' },
+                { label: 'Contact', url: '#contact' }
+            ],
+            ctaText: 'Get Started',
+            ctaUrl: '#'
+        },
+        footer: {
+            ...gridDefaults,
+            backgroundColor: '#1f2937',
+            textColor: '#ffffff',
+            companyName: 'Company Name',
+            companyDescription: 'Building amazing products since 2020.',
+            copyrightText: '© ' + new Date().getFullYear() + ' All rights reserved.',
+            columns: [
+                {
+                    title: 'Product',
+                    links: [
+                        { label: 'Features', url: '#features' },
+                        { label: 'Pricing', url: '#pricing' }
+                    ]
+                },
+                {
+                    title: 'Company',
+                    links: [
+                        { label: 'About', url: '#about' },
+                        { label: 'Contact', url: '#contact' }
+                    ]
+                }
+            ],
+            socialLinks: [
+                { platform: 'twitter', url: '#' },
+                { platform: 'facebook', url: '#' },
+                { platform: 'linkedin', url: '#' }
+            ]
+        },
+        faq: {
+            ...gridDefaults,
+            backgroundColor: '#ffffff',
+            textColor: '#1f2937',
+            title: 'Domande Frequenti',
+            subtitle: '',
+            items: [
+                { question: 'Come posso iniziare?', answer: 'Registrati gratuitamente e inizia subito.' },
+                { question: 'Quali metodi di pagamento accettate?', answer: 'Carte di credito, PayPal e bonifico.' },
+                { question: 'Posso annullare in qualsiasi momento?', answer: 'Sì, senza penali.' }
+            ]
+        },
+        testimonials: {
+            ...gridDefaults,
+            backgroundColor: '#f9fafb',
+            textColor: '#1f2937',
+            title: 'Cosa dicono i clienti',
+            subtitle: '',
+            columns: 3,
+            testimonials: [
+                { name: 'Maria Rossi', role: 'CEO', text: 'Prodotto eccezionale!', rating: 5, image: '' },
+                { name: 'Giuseppe Verdi', role: 'Manager', text: 'Servizio impeccabile.', rating: 5, image: '' },
+                { name: 'Anna Bianchi', role: 'Designer', text: 'Facile e potente.', rating: 4, image: '' }
+            ]
+        },
+        pricing: {
+            ...gridDefaults,
+            backgroundColor: '#ffffff',
+            textColor: '#1f2937',
+            title: 'Scegli il tuo piano',
+            subtitle: 'Prezzi semplici e trasparenti',
+            plans: [
+                {
+                    name: 'Starter',
+                    price: '9',
+                    period: '/mese',
+                    description: 'Perfetto per iniziare',
+                    features: ['5 progetti', '10GB storage', 'Supporto email'],
+                    cta: 'Inizia gratis',
+                    ctaUrl: '#',
+                    highlighted: false
+                },
+                {
+                    name: 'Professional',
+                    price: '29',
+                    period: '/mese',
+                    description: 'Per professionisti',
+                    features: ['Progetti illimitati', '100GB storage', 'Supporto prioritario', 'Analytics'],
+                    cta: 'Prova gratuita',
+                    ctaUrl: '#',
+                    highlighted: true
+                },
+                {
+                    name: 'Enterprise',
+                    price: '99',
+                    period: '/mese',
+                    description: 'Per grandi team',
+                    features: ['Tutto in Pro', 'Storage illimitato', 'Account manager', 'SLA'],
+                    cta: 'Contattaci',
+                    ctaUrl: '#',
+                    highlighted: false
+                }
+            ]
         }
     };
 
@@ -421,7 +536,12 @@ function getBlockIcon(type) {
         contact: '📧',
         video: '🎬',
         tabs: '📑',
-        countdown: '⏱️'
+        countdown: '⏱️',
+        header: '🔝',
+        footer: '🔻',
+        faq: '❓',
+        testimonials: '💬',
+        pricing: '💰'
     };
     return icons[type] || '📦';
 }
@@ -440,7 +560,12 @@ function getBlockLabel(type) {
         contact: 'Contatti',
         video: 'Video',
         tabs: 'Tabs',
-        countdown: 'Countdown'
+        countdown: 'Countdown',
+        header: 'Header/Navbar',
+        footer: 'Footer',
+        faq: 'FAQ',
+        testimonials: 'Testimonials',
+        pricing: 'Pricing'
     };
     return labels[type] || type;
 }
@@ -523,6 +648,61 @@ function renderBlockPreview(block) {
                 <div style="text-align: center;"><span style="font-size: 2rem; font-weight: bold;">00</span><br><small>Ore</small></div>
                 <div style="text-align: center;"><span style="font-size: 2rem; font-weight: bold;">00</span><br><small>Min</small></div>
                 <div style="text-align: center;"><span style="font-size: 2rem; font-weight: bold;">00</span><br><small>Sec</small></div>
+            </div>`;
+            break;
+        case 'header':
+            preview += `<div style="background: ${settings.backgroundColor}; color: ${settings.textColor}; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; border-radius: 8px;">
+                <strong>${settings.logoText}</strong>
+                <div style="display: flex; gap: 16px; align-items: center;">
+                    <span style="opacity: 0.7;">Home</span>
+                    <span style="opacity: 0.7;">Features</span>
+                    <span style="opacity: 0.7;">Pricing</span>
+                    ${settings.ctaText ? `<button style="background: #3b82f6; color: white; border: none; padding: 6px 12px; border-radius: 4px;">${settings.ctaText}</button>` : ''}
+                </div>
+            </div>`;
+            break;
+        case 'footer':
+            preview += `<div style="background: ${settings.backgroundColor}; color: ${settings.textColor}; padding: 20px; border-radius: 8px;">
+                <div style="font-weight: bold; margin-bottom: 8px;">${settings.companyName}</div>
+                <div style="font-size: 0.75rem; opacity: 0.7;">${settings.copyrightText}</div>
+            </div>`;
+            break;
+        case 'faq':
+            preview += `<div style="background: ${settings.backgroundColor}; color: ${settings.textColor}; padding: 20px; border-radius: 8px;">
+                <div style="text-align: center; margin-bottom: 16px;"><strong>${settings.title}</strong></div>
+                <div style="border: 1px solid #e5e7eb; border-radius: 4px;">
+                    <div style="padding: 10px; border-bottom: 1px solid #e5e7eb; cursor: pointer;">Come posso iniziare? <span style="float: right;">+</span></div>
+                    <div style="padding: 10px; border-bottom: 1px solid #e5e7eb; cursor: pointer;">Quali metodi di pagamento? <span style="float: right;">+</span></div>
+                    <div style="padding: 10px; cursor: pointer;">Posso annullare? <span style="float: right;">+</span></div>
+                </div>
+            </div>`;
+            break;
+        case 'testimonials':
+            preview += `<div style="background: ${settings.backgroundColor}; color: ${settings.textColor}; padding: 20px; border-radius: 8px;">
+                <div style="text-align: center; margin-bottom: 16px;"><strong>${settings.title}</strong></div>
+                <div style="display: grid; grid-template-columns: repeat(${Math.min(settings.columns || 3, 3)}, 1fr); gap: 10px;">
+                    ${(settings.testimonials || []).slice(0, 3).map(t => `
+                        <div style="background: white; padding: 10px; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                            <div style="color: #fbbf24; margin-bottom: 4px;">★★★★★</div>
+                            <div style="font-size: 0.75rem; margin-bottom: 8px;">"${t.text.substring(0, 50)}..."</div>
+                            <div style="font-size: 0.7rem; font-weight: bold;">${t.name}</div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>`;
+            break;
+        case 'pricing':
+            preview += `<div style="background: ${settings.backgroundColor}; color: ${settings.textColor}; padding: 20px; border-radius: 8px;">
+                <div style="text-align: center; margin-bottom: 16px;"><strong>${settings.title}</strong></div>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+                    ${(settings.plans || []).slice(0, 3).map(p => `
+                        <div style="background: white; padding: 10px; border-radius: 4px; text-align: center; ${p.highlighted ? 'border: 2px solid #3b82f6;' : 'border: 1px solid #e5e7eb;'}">
+                            <div style="font-weight: bold; font-size: 0.8rem;">${p.name}</div>
+                            <div style="font-size: 1.2rem; font-weight: bold; margin: 8px 0;">€${p.price}</div>
+                            <div style="font-size: 0.6rem; opacity: 0.7;">${p.period}</div>
+                        </div>
+                    `).join('')}
+                </div>
             </div>`;
             break;
         default:
@@ -790,6 +970,129 @@ function renderBlockSettings(block) {
                 <div class="property-group">
                     <label>Colore Testo</label>
                     <input type="color" id="setting-textColor" value="${block.settings.textColor}" class="form-control">
+                </div>
+            `;
+            break;
+
+        case 'header':
+            html += `
+                <div class="property-group">
+                    <label>Colore Sfondo</label>
+                    <input type="color" id="setting-backgroundColor" value="${block.settings.backgroundColor}" class="form-control">
+                </div>
+                <div class="property-group">
+                    <label>Colore Testo</label>
+                    <input type="color" id="setting-textColor" value="${block.settings.textColor}" class="form-control">
+                </div>
+                <div class="property-group">
+                    <label>Testo Logo</label>
+                    <input type="text" id="setting-logoText" value="${block.settings.logoText}" class="form-control">
+                </div>
+                <div class="property-group">
+                    <label>Testo CTA</label>
+                    <input type="text" id="setting-ctaText" value="${block.settings.ctaText}" class="form-control">
+                </div>
+                <div class="property-group">
+                    <label>URL CTA</label>
+                    <input type="text" id="setting-ctaUrl" value="${block.settings.ctaUrl}" class="form-control">
+                </div>
+                <div class="property-group">
+                    <label>
+                        <input type="checkbox" id="setting-sticky" ${block.settings.sticky ? 'checked' : ''}>
+                        Sticky Header
+                    </label>
+                </div>
+            `;
+            break;
+
+        case 'footer':
+            html += `
+                <div class="property-group">
+                    <label>Colore Sfondo</label>
+                    <input type="color" id="setting-backgroundColor" value="${block.settings.backgroundColor}" class="form-control">
+                </div>
+                <div class="property-group">
+                    <label>Colore Testo</label>
+                    <input type="color" id="setting-textColor" value="${block.settings.textColor}" class="form-control">
+                </div>
+                <div class="property-group">
+                    <label>Nome Azienda</label>
+                    <input type="text" id="setting-companyName" value="${block.settings.companyName}" class="form-control">
+                </div>
+                <div class="property-group">
+                    <label>Descrizione</label>
+                    <textarea id="setting-companyDescription" class="form-control" rows="2">${block.settings.companyDescription}</textarea>
+                </div>
+                <div class="property-group">
+                    <label>Testo Copyright</label>
+                    <input type="text" id="setting-copyrightText" value="${block.settings.copyrightText}" class="form-control">
+                </div>
+            `;
+            break;
+
+        case 'faq':
+            html += `
+                <div class="property-group">
+                    <label>Colore Sfondo</label>
+                    <input type="color" id="setting-backgroundColor" value="${block.settings.backgroundColor}" class="form-control">
+                </div>
+                <div class="property-group">
+                    <label>Colore Testo</label>
+                    <input type="color" id="setting-textColor" value="${block.settings.textColor}" class="form-control">
+                </div>
+                <div class="property-group">
+                    <label>Titolo</label>
+                    <input type="text" id="setting-title" value="${block.settings.title}" class="form-control">
+                </div>
+                <div class="property-group">
+                    <label>Sottotitolo</label>
+                    <input type="text" id="setting-subtitle" value="${block.settings.subtitle || ''}" class="form-control">
+                </div>
+            `;
+            break;
+
+        case 'testimonials':
+            html += `
+                <div class="property-group">
+                    <label>Colore Sfondo</label>
+                    <input type="color" id="setting-backgroundColor" value="${block.settings.backgroundColor}" class="form-control">
+                </div>
+                <div class="property-group">
+                    <label>Colore Testo</label>
+                    <input type="color" id="setting-textColor" value="${block.settings.textColor}" class="form-control">
+                </div>
+                <div class="property-group">
+                    <label>Titolo</label>
+                    <input type="text" id="setting-title" value="${block.settings.title}" class="form-control">
+                </div>
+                <div class="property-group">
+                    <label>Colonne</label>
+                    <select id="setting-columns" class="form-control">
+                        <option value="1" ${block.settings.columns == 1 ? 'selected' : ''}>1 colonna</option>
+                        <option value="2" ${block.settings.columns == 2 ? 'selected' : ''}>2 colonne</option>
+                        <option value="3" ${block.settings.columns == 3 ? 'selected' : ''}>3 colonne</option>
+                    </select>
+                </div>
+            `;
+            break;
+
+        case 'pricing':
+            html += `
+                <div class="property-group">
+                    <label>Colore Sfondo</label>
+                    <input type="color" id="setting-backgroundColor" value="${block.settings.backgroundColor}" class="form-control">
+                </div>
+                <div class="property-group">
+                    <label>Colore Testo</label>
+                    <input type="color" id="setting-textColor" value="${block.settings.textColor}" class="form-control">
+                </div>
+                <div class="property-group">
+                    <label>Titolo</label>
+                    <input type="text" id="setting-title" value="${block.settings.title}" class="form-control">
+                </div>
+                <div class="property-group">
+                    <label>Sottotitolo</label>
+                    <input type="text" id="setting-subtitle" value="${block.settings.subtitle || ''}" class="form-control">
                 </div>
             `;
             break;

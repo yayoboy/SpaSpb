@@ -498,6 +498,26 @@ function showEditor($db) {
                         <span class="block-icon">⏱️</span>
                         <span>Countdown</span>
                     </div>
+                    <div class="block-item" draggable="true" data-type="header">
+                        <span class="block-icon">🔝</span>
+                        <span>Header/Navbar</span>
+                    </div>
+                    <div class="block-item" draggable="true" data-type="footer">
+                        <span class="block-icon">🔻</span>
+                        <span>Footer</span>
+                    </div>
+                    <div class="block-item" draggable="true" data-type="faq">
+                        <span class="block-icon">❓</span>
+                        <span>FAQ</span>
+                    </div>
+                    <div class="block-item" draggable="true" data-type="testimonials">
+                        <span class="block-icon">💬</span>
+                        <span>Testimonials</span>
+                    </div>
+                    <div class="block-item" draggable="true" data-type="pricing">
+                        <span class="block-icon">💰</span>
+                        <span>Pricing</span>
+                    </div>
                 </div>
             </aside>
 
