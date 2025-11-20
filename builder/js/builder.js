@@ -873,6 +873,7 @@ function uploadImage(input) {
 
     const formData = new FormData();
     formData.append('image', input.files[0]);
+    formData.append('csrf_token', CSRF_TOKEN);
 
     fetch('?action=api_upload', {
         method: 'POST',
@@ -938,6 +939,7 @@ function savePage() {
     formData.append('blocks', JSON.stringify(blocks));
     formData.append('ui_library', uiLibrary);
     formData.append('theme', theme);
+    formData.append('csrf_token', CSRF_TOKEN);
 
     fetch('?action=api_save', {
         method: 'POST',

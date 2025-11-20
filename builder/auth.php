@@ -3,8 +3,20 @@
  * SpaSpb - Sistema di Autenticazione
  */
 
-// Avvia sessione se non già avviata
+// Avvia sessione se non già avviata con impostazioni di sicurezza
 if (session_status() === PHP_SESSION_NONE) {
+    // Configura opzioni di sicurezza per le sessioni
+    $isSecure = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on';
+
+    session_set_cookie_params([
+        'lifetime' => 0,
+        'path' => '/',
+        'domain' => '',
+        'secure' => $isSecure,
+        'httponly' => true,
+        'samesite' => 'Strict'
+    ]);
+
     session_start();
 }
 
@@ -61,6 +73,9 @@ function login($username, $password) {
     }
 
     if ($username === AUTH_USERNAME && password_verify($password, AUTH_PASSWORD)) {
+        // Rigenera ID sessione per prevenire session fixation
+        session_regenerate_id(true);
+
         $_SESSION['authenticated'] = true;
         $_SESSION['username'] = $username;
         $_SESSION['last_activity'] = time();

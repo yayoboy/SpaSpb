@@ -41,12 +41,25 @@ function initDatabase() {
             )
         ");
 
+        // Crea tabella login_attempts per rate limiting
+        $db->exec("
+            CREATE TABLE IF NOT EXISTS login_attempts (
+                ip TEXT PRIMARY KEY,
+                attempts INTEGER DEFAULT 0,
+                last_attempt DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        ");
+
         // Inserisci impostazioni di default
         $db->exec("INSERT OR IGNORE INTO settings (key, value) VALUES ('default_ui_library', 'tailwind')");
 
         return $db;
     } catch (Exception $e) {
-        die("Errore database: " . $e->getMessage());
+        // Non esporre dettagli dell'errore in produzione
+        if (defined('DEBUG_MODE') && DEBUG_MODE) {
+            die("Errore database: " . $e->getMessage());
+        }
+        die("Errore di sistema. Riprova più tardi.");
     }
 }
 
@@ -68,13 +81,24 @@ switch ($action) {
         break;
 
     case 'do_login':
+        $ip = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+
+        // Verifica rate limiting
+        if (isLoginBlocked($db, $ip)) {
+            $minutes = getBlockedMinutesRemaining($db, $ip);
+            showLoginPage("Troppi tentativi falliti. Riprova tra {$minutes} minuti.");
+            break;
+        }
+
         $username = $_POST['username'] ?? '';
         $password = $_POST['password'] ?? '';
 
         if (login($username, $password)) {
+            clearLoginAttempts($db, $ip);
             header('Location: ?action=dashboard');
             exit;
         } else {
+            recordFailedLogin($db, $ip);
             showLoginPage('Username o password non corretti');
         }
         break;
@@ -131,6 +155,123 @@ switch ($action) {
 }
 
 // ==================== FUNZIONI ====================
+
+/**
+ * Sanitizza contenuto HTML per prevenire XSS
+ * Mantiene i tag HTML base ma rimuove script e event handlers
+ */
+function sanitizeHtml($html) {
+    if (empty($html)) {
+        return '';
+    }
+
+    // Tag permessi (whitelist)
+    $allowedTags = '<h1><h2><h3><h4><h5><h6><p><br><strong><b><em><i><u><s><strike>'
+                 . '<a><ul><ol><li><blockquote><pre><code><hr><span><div>'
+                 . '<table><thead><tbody><tr><th><td><img><figure><figcaption><small>';
+
+    // Prima rimuovi i tag non permessi
+    $html = strip_tags($html, $allowedTags);
+
+    // Rimuovi event handlers e attributi pericolosi
+    $dangerousPatterns = [
+        // Event handlers
+        '/\s+on\w+\s*=\s*["\'][^"\']*["\']/i',
+        '/\s+on\w+\s*=\s*[^\s>]+/i',
+        // javascript: URLs
+        '/href\s*=\s*["\']?\s*javascript:[^"\'>\s]*/i',
+        '/src\s*=\s*["\']?\s*javascript:[^"\'>\s]*/i',
+        // data: URLs (possono contenere script)
+        '/href\s*=\s*["\']?\s*data:[^"\'>\s]*/i',
+        // Expression e behavior (IE)
+        '/expression\s*\([^)]*\)/i',
+        '/behavior\s*:/i',
+        // vbscript
+        '/vbscript\s*:/i',
+    ];
+
+    foreach ($dangerousPatterns as $pattern) {
+        $html = preg_replace($pattern, '', $html);
+    }
+
+    return $html;
+}
+
+/**
+ * Verifica se l'IP è bloccato per troppi tentativi di login
+ */
+function isLoginBlocked($db, $ip) {
+    $maxAttempts = 5;
+    $lockoutTime = 15 * 60; // 15 minuti in secondi
+
+    $stmt = $db->prepare("SELECT attempts, last_attempt FROM login_attempts WHERE ip = ?");
+    $stmt->bindValue(1, $ip, SQLITE3_TEXT);
+    $result = $stmt->execute();
+    $row = $result->fetchArray(SQLITE3_ASSOC);
+
+    if (!$row) {
+        return false;
+    }
+
+    $lastAttempt = strtotime($row['last_attempt']);
+    $timePassed = time() - $lastAttempt;
+
+    // Se è passato il tempo di lockout, resetta
+    if ($timePassed > $lockoutTime) {
+        $stmt = $db->prepare("DELETE FROM login_attempts WHERE ip = ?");
+        $stmt->bindValue(1, $ip, SQLITE3_TEXT);
+        $stmt->execute();
+        return false;
+    }
+
+    return $row['attempts'] >= $maxAttempts;
+}
+
+/**
+ * Registra un tentativo di login fallito
+ */
+function recordFailedLogin($db, $ip) {
+    $stmt = $db->prepare("
+        INSERT INTO login_attempts (ip, attempts, last_attempt)
+        VALUES (?, 1, CURRENT_TIMESTAMP)
+        ON CONFLICT(ip) DO UPDATE SET
+            attempts = attempts + 1,
+            last_attempt = CURRENT_TIMESTAMP
+    ");
+    $stmt->bindValue(1, $ip, SQLITE3_TEXT);
+    $stmt->execute();
+}
+
+/**
+ * Pulisce i tentativi di login dopo successo
+ */
+function clearLoginAttempts($db, $ip) {
+    $stmt = $db->prepare("DELETE FROM login_attempts WHERE ip = ?");
+    $stmt->bindValue(1, $ip, SQLITE3_TEXT);
+    $stmt->execute();
+}
+
+/**
+ * Ottiene minuti rimanenti per il blocco
+ */
+function getBlockedMinutesRemaining($db, $ip) {
+    $lockoutTime = 15 * 60;
+
+    $stmt = $db->prepare("SELECT last_attempt FROM login_attempts WHERE ip = ?");
+    $stmt->bindValue(1, $ip, SQLITE3_TEXT);
+    $result = $stmt->execute();
+    $row = $result->fetchArray(SQLITE3_ASSOC);
+
+    if (!$row) {
+        return 0;
+    }
+
+    $lastAttempt = strtotime($row['last_attempt']);
+    $timePassed = time() - $lastAttempt;
+    $remaining = $lockoutTime - $timePassed;
+
+    return max(0, ceil($remaining / 60));
+}
 
 /**
  * Dashboard - Lista pagine
@@ -193,11 +334,17 @@ function showDashboard($db) {
         </div>
 
         <script>
+        const CSRF_TOKEN = '<?= getCsrfToken() ?>';
+
         function deletePage(id) {
             if (!confirm('Sei sicuro di voler eliminare questa pagina?')) return;
 
+            const formData = new FormData();
+            formData.append('csrf_token', CSRF_TOKEN);
+
             fetch('?action=api_delete&id=' + id, {
-                method: 'POST'
+                method: 'POST',
+                body: formData
             })
             .then(res => res.json())
             .then(data => {
@@ -371,6 +518,7 @@ function showEditor($db) {
 
         <script>
         const PAGE_ID = <?= $id ?>;
+        const CSRF_TOKEN = '<?= getCsrfToken() ?>';
         </script>
         <script src="js/builder.js"></script>
     </body>
@@ -382,6 +530,12 @@ function showEditor($db) {
  * API: Salva pagina
  */
 function apiSavePage($db) {
+    // Verifica CSRF token
+    if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
+        echo json_encode(['success' => false, 'error' => 'Token di sicurezza non valido']);
+        return;
+    }
+
     $id = $_POST['id'] ?? 0;
     $title = $_POST['title'] ?? '';
     $blocks = $_POST['blocks'] ?? '[]';
@@ -440,6 +594,12 @@ function apiLoadPage($db) {
  * API: Elimina pagina
  */
 function apiDeletePage($db) {
+    // Verifica CSRF token
+    if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
+        echo json_encode(['success' => false, 'error' => 'Token di sicurezza non valido']);
+        return;
+    }
+
     $id = $_GET['id'] ?? 0;
 
     $stmt = $db->prepare("DELETE FROM pages WHERE id = ?");
@@ -456,6 +616,12 @@ function apiDeletePage($db) {
  * API: Upload immagine
  */
 function apiUploadImage() {
+    // Verifica CSRF token
+    if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
+        echo json_encode(['success' => false, 'error' => 'Token di sicurezza non valido']);
+        return;
+    }
+
     if (!isset($_FILES['image'])) {
         echo json_encode(['success' => false, 'error' => 'Nessun file caricato']);
         return;
@@ -619,7 +785,7 @@ function getUILibraryCDN($library) {
  */
 function renderBlock($block, $uiLibrary) {
     $type = $block['type'] ?? 'text';
-    $content = $block['content'] ?? '';
+    $content = sanitizeHtml($block['content'] ?? '');
     $settings = $block['settings'] ?? [];
 
     $templateFile = __DIR__ . "/templates/{$type}.php";
@@ -631,16 +797,49 @@ function renderBlock($block, $uiLibrary) {
     }
 
     // Fallback
-    return "<div class='block block-{$type}'>{$content}</div>";
+    return "<div class='block block-{$type}'>" . $content . "</div>";
 }
 
 /**
  * Copia immagini nella cartella assets
  */
+/**
+ * Valida un path immagine per prevenire path traversal
+ */
+function isValidImagePath($path) {
+    // Non permettere path vuoti
+    if (empty($path)) {
+        return false;
+    }
+
+    // Non permettere path traversal
+    if (strpos($path, '..') !== false) {
+        return false;
+    }
+
+    // Non permettere path assoluti
+    if ($path[0] === '/' || preg_match('/^[a-zA-Z]:/', $path)) {
+        return false;
+    }
+
+    // Deve iniziare con 'uploads/'
+    if (strpos($path, 'uploads/') !== 0) {
+        return false;
+    }
+
+    return true;
+}
+
 function copyImages($blocks) {
     foreach ($blocks as $block) {
         if (isset($block['settings']['image'])) {
             $image = $block['settings']['image'];
+
+            // Valida il path per sicurezza
+            if (!isValidImagePath($image)) {
+                continue;
+            }
+
             $source = __DIR__ . '/' . $image;
             $dest = ASSETS_DIR . 'img/' . basename($image);
 
@@ -651,6 +850,11 @@ function copyImages($blocks) {
 
         if (isset($block['settings']['images']) && is_array($block['settings']['images'])) {
             foreach ($block['settings']['images'] as $image) {
+                // Valida il path per sicurezza
+                if (!isValidImagePath($image)) {
+                    continue;
+                }
+
                 $source = __DIR__ . '/' . $image;
                 $dest = ASSETS_DIR . 'img/' . basename($image);
 

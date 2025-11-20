@@ -9,7 +9,7 @@
  */
 
 // Autenticazione - CAMBIA QUESTI VALORI!
-define('AUTH_ENABLED', false); // Imposta a TRUE per produzione!
+define('AUTH_ENABLED', true); // ABILITATA di default per sicurezza - disabilita solo per sviluppo locale
 define('AUTH_USERNAME', 'admin'); // Cambia con il tuo username
 define('AUTH_PASSWORD', '$2y$12$HHzsAbc4WSriK8tIlfCsoOVwEP72BmBZW38DBgev6JRy0Wdt435Hu'); // Hash di "admin123" - CAMBIA!
 
