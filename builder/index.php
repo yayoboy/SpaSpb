@@ -159,6 +159,26 @@ switch ($action) {
         exportPage($db);
         break;
 
+    case 'api_export_json':
+        requireAuth();
+        apiExportJson($db);
+        break;
+
+    case 'api_import_json':
+        requireAuth();
+        apiImportJson($db);
+        break;
+
+    case 'templates':
+        requireAuth();
+        showTemplates($db);
+        break;
+
+    case 'new_from_template':
+        requireAuth();
+        createFromTemplate($db);
+        break;
+
     default:
         requireAuth();
         showDashboard($db);
@@ -309,7 +329,9 @@ function showDashboard($db) {
                     <?php if (AUTH_ENABLED): ?>
                         <span class="user-info">👤 <?= htmlspecialchars($_SESSION['username'] ?? 'Utente') ?></span>
                     <?php endif; ?>
-                    <a href="?action=new" class="btn btn-primary">+ Nuova Pagina</a>
+                    <button onclick="showImportModal()" class="btn btn-secondary">📥 Importa JSON</button>
+                    <a href="?action=templates" class="btn btn-primary">+ Da Template</a>
+                    <a href="?action=new" class="btn btn-primary">+ Pagina Vuota</a>
                     <?php if (AUTH_ENABLED): ?>
                         <a href="?action=logout" class="btn btn-secondary">Logout</a>
                     <?php endif; ?>
@@ -336,11 +358,30 @@ function showDashboard($db) {
                                 <a href="?action=edit&id=<?= $page['id'] ?>" class="btn btn-sm">Modifica</a>
                                 <a href="?action=duplicate&id=<?= $page['id'] ?>" class="btn btn-sm btn-secondary">Duplica</a>
                                 <button onclick="showExportModal(<?= $page['id'] ?>)" class="btn btn-sm btn-success">Esporta</button>
+                                <a href="?action=api_export_json&id=<?= $page['id'] ?>" class="btn btn-sm btn-secondary">JSON</a>
                                 <button onclick="deletePage(<?= $page['id'] ?>)" class="btn btn-sm btn-danger">Elimina</button>
                             </div>
                         </div>
                     <?php endforeach; ?>
                 <?php endif; ?>
+            </div>
+        </div>
+
+        <!-- Import Modal -->
+        <div id="import-modal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Importa da JSON</h3>
+                    <button onclick="closeImportModal()" class="modal-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p>Seleziona un file JSON esportato precedentemente:</p>
+                    <form id="import-form" enctype="multipart/form-data">
+                        <input type="hidden" name="csrf_token" value="<?= getCsrfToken() ?>">
+                        <input type="file" name="json_file" accept=".json" class="form-control" required style="margin-bottom: 16px;">
+                        <button type="submit" class="btn btn-primary" style="width: 100%;">Importa</button>
+                    </form>
+                </div>
             </div>
         </div>
 
@@ -418,6 +459,41 @@ function showDashboard($db) {
         document.getElementById('export-modal').addEventListener('click', function(e) {
             if (e.target === this) closeExportModal();
         });
+
+        // Import modal functions
+        function showImportModal() {
+            document.getElementById('import-modal').style.display = 'flex';
+        }
+
+        function closeImportModal() {
+            document.getElementById('import-modal').style.display = 'none';
+        }
+
+        document.getElementById('import-modal').addEventListener('click', function(e) {
+            if (e.target === this) closeImportModal();
+        });
+
+        // Import form submission
+        document.getElementById('import-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+
+            fetch('?action=api_import_json', {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    window.location.href = '?action=edit&id=' + data.id;
+                } else {
+                    alert('Errore: ' + data.error);
+                }
+            })
+            .catch(err => {
+                alert('Errore durante l\'importazione');
+            });
+        });
         </script>
     </body>
     </html>
@@ -474,6 +550,289 @@ function duplicatePage($db) {
 
     $newId = $db->lastInsertRowID();
     header("Location: ?action=edit&id={$newId}");
+    exit;
+}
+
+/**
+ * Restituisce i template predefiniti
+ */
+function getPageTemplates() {
+    return [
+        'blank' => [
+            'name' => 'Pagina Vuota',
+            'description' => 'Inizia da zero',
+            'icon' => '📄',
+            'blocks' => []
+        ],
+        'landing' => [
+            'name' => 'Landing Page',
+            'description' => 'Hero, features, CTA, contatti',
+            'icon' => '🚀',
+            'blocks' => [
+                ['type' => 'header', 'content' => '', 'settings' => ['logoText' => 'Brand', 'ctaText' => 'Inizia', 'ctaUrl' => '#contact', 'backgroundColor' => '#ffffff', 'textColor' => '#1f2937', 'gridColumns' => 12, 'gridOffset' => 0]],
+                ['type' => 'hero', 'content' => '<h1>Benvenuto nel Futuro</h1><p>La soluzione perfetta per il tuo business</p>', 'settings' => ['backgroundColor' => '#3b82f6', 'textColor' => '#ffffff', 'align' => 'center', 'height' => '500px', 'gridColumns' => 12, 'gridOffset' => 0]],
+                ['type' => 'features', 'content' => '<h2>Le nostre Features</h2>', 'settings' => ['features' => [['icon' => '⚡', 'title' => 'Veloce', 'description' => 'Prestazioni eccellenti'], ['icon' => '🎨', 'title' => 'Bello', 'description' => 'Design moderno'], ['icon' => '🔒', 'title' => 'Sicuro', 'description' => 'Protetto e affidabile']], 'gridColumns' => 12, 'gridOffset' => 0]],
+                ['type' => 'cta', 'content' => '<h2>Pronto per iniziare?</h2><p>Unisciti a migliaia di clienti soddisfatti</p>', 'settings' => ['backgroundColor' => '#1f2937', 'textColor' => '#ffffff', 'buttonText' => 'Inizia Ora', 'buttonLink' => '#contact', 'gridColumns' => 12, 'gridOffset' => 0]],
+                ['type' => 'contact', 'content' => '<h2>Contattaci</h2><p>Siamo qui per aiutarti</p>', 'settings' => ['email' => 'info@example.com', 'phone' => '+39 123 456 789', 'address' => 'Via Roma 1, Milano', 'gridColumns' => 8, 'gridOffset' => 2]],
+                ['type' => 'footer', 'content' => '', 'settings' => ['companyName' => 'Company', 'copyrightText' => '© 2024 All rights reserved.', 'backgroundColor' => '#1f2937', 'textColor' => '#ffffff', 'gridColumns' => 12, 'gridOffset' => 0]]
+            ]
+        ],
+        'portfolio' => [
+            'name' => 'Portfolio',
+            'description' => 'Mostra i tuoi lavori',
+            'icon' => '🎨',
+            'blocks' => [
+                ['type' => 'header', 'content' => '', 'settings' => ['logoText' => 'Portfolio', 'ctaText' => 'Contattami', 'ctaUrl' => '#contact', 'backgroundColor' => '#ffffff', 'textColor' => '#1f2937', 'gridColumns' => 12, 'gridOffset' => 0]],
+                ['type' => 'hero', 'content' => '<h1>Ciao, sono un Designer</h1><p>Creo esperienze digitali uniche</p>', 'settings' => ['backgroundColor' => '#f9fafb', 'textColor' => '#1f2937', 'align' => 'center', 'height' => '400px', 'gridColumns' => 12, 'gridOffset' => 0]],
+                ['type' => 'text', 'content' => '<h2>I miei lavori</h2><p>Una selezione dei progetti più recenti</p>', 'settings' => ['align' => 'center', 'padding' => '40px', 'gridColumns' => 12, 'gridOffset' => 0]],
+                ['type' => 'gallery', 'content' => '', 'settings' => ['images' => [], 'columns' => 3, 'gap' => 'medium', 'gridColumns' => 12, 'gridOffset' => 0]],
+                ['type' => 'testimonials', 'content' => '', 'settings' => ['title' => 'Cosa dicono i clienti', 'columns' => 3, 'backgroundColor' => '#f9fafb', 'textColor' => '#1f2937', 'gridColumns' => 12, 'gridOffset' => 0]],
+                ['type' => 'contact', 'content' => '<h2>Lavoriamo insieme</h2>', 'settings' => ['email' => 'hello@portfolio.com', 'gridColumns' => 8, 'gridOffset' => 2]],
+                ['type' => 'footer', 'content' => '', 'settings' => ['companyName' => 'Portfolio', 'copyrightText' => '© 2024', 'backgroundColor' => '#1f2937', 'textColor' => '#ffffff', 'gridColumns' => 12, 'gridOffset' => 0]]
+            ]
+        ],
+        'business' => [
+            'name' => 'Business',
+            'description' => 'Sito aziendale professionale',
+            'icon' => '💼',
+            'blocks' => [
+                ['type' => 'header', 'content' => '', 'settings' => ['logoText' => 'Business Co.', 'ctaText' => 'Richiedi Demo', 'ctaUrl' => '#contact', 'backgroundColor' => '#ffffff', 'textColor' => '#1f2937', 'gridColumns' => 12, 'gridOffset' => 0]],
+                ['type' => 'hero', 'content' => '<h1>Soluzioni per il tuo Business</h1><p>Innovazione e affidabilità dal 2010</p>', 'settings' => ['backgroundColor' => '#1e3a8a', 'textColor' => '#ffffff', 'align' => 'center', 'height' => '500px', 'gridColumns' => 12, 'gridOffset' => 0]],
+                ['type' => 'features', 'content' => '<h2>I nostri servizi</h2>', 'settings' => ['features' => [['icon' => '📊', 'title' => 'Consulenza', 'description' => 'Analisi e strategia'], ['icon' => '💻', 'title' => 'Sviluppo', 'description' => 'Soluzioni su misura'], ['icon' => '🤝', 'title' => 'Supporto', 'description' => 'Assistenza 24/7']], 'gridColumns' => 12, 'gridOffset' => 0]],
+                ['type' => 'pricing', 'content' => '', 'settings' => ['title' => 'I nostri piani', 'subtitle' => 'Scegli la soluzione giusta per te', 'backgroundColor' => '#f9fafb', 'textColor' => '#1f2937', 'gridColumns' => 12, 'gridOffset' => 0]],
+                ['type' => 'faq', 'content' => '', 'settings' => ['title' => 'Domande frequenti', 'backgroundColor' => '#ffffff', 'textColor' => '#1f2937', 'gridColumns' => 12, 'gridOffset' => 0]],
+                ['type' => 'contact', 'content' => '<h2>Contattaci</h2>', 'settings' => ['email' => 'info@business.com', 'phone' => '+39 02 1234567', 'address' => 'Via Business 1, Milano', 'gridColumns' => 8, 'gridOffset' => 2]],
+                ['type' => 'footer', 'content' => '', 'settings' => ['companyName' => 'Business Co.', 'copyrightText' => '© 2024 Business Co. - P.IVA 12345678901', 'backgroundColor' => '#1e3a8a', 'textColor' => '#ffffff', 'gridColumns' => 12, 'gridOffset' => 0]]
+            ]
+        ],
+        'event' => [
+            'name' => 'Evento',
+            'description' => 'Promuovi un evento',
+            'icon' => '🎉',
+            'blocks' => [
+                ['type' => 'header', 'content' => '', 'settings' => ['logoText' => 'Event 2024', 'ctaText' => 'Registrati', 'ctaUrl' => '#contact', 'backgroundColor' => '#ffffff', 'textColor' => '#1f2937', 'gridColumns' => 12, 'gridOffset' => 0]],
+                ['type' => 'hero', 'content' => '<h1>Grande Evento 2024</h1><p>15-16 Marzo | Milano</p>', 'settings' => ['backgroundColor' => '#7c3aed', 'textColor' => '#ffffff', 'align' => 'center', 'height' => '500px', 'gridColumns' => 12, 'gridOffset' => 0]],
+                ['type' => 'countdown', 'content' => '<h2>Manca poco!</h2>', 'settings' => ['targetDate' => date('Y-m-d', strtotime('+30 days')), 'backgroundColor' => '#1f2937', 'textColor' => '#ffffff', 'gridColumns' => 12, 'gridOffset' => 0]],
+                ['type' => 'features', 'content' => '<h2>Programma</h2>', 'settings' => ['features' => [['icon' => '🎤', 'title' => 'Keynote', 'description' => 'Speaker internazionali'], ['icon' => '🛠️', 'title' => 'Workshop', 'description' => 'Sessioni pratiche'], ['icon' => '🤝', 'title' => 'Networking', 'description' => 'Connetti con esperti']], 'gridColumns' => 12, 'gridOffset' => 0]],
+                ['type' => 'video', 'content' => '', 'settings' => ['videoUrl' => '', 'title' => 'Rivivi l\'edizione precedente', 'aspectRatio' => '16:9', 'gridColumns' => 12, 'gridOffset' => 0]],
+                ['type' => 'contact', 'content' => '<h2>Registrati ora</h2><p>Posti limitati!</p>', 'settings' => ['email' => 'info@event.com', 'gridColumns' => 8, 'gridOffset' => 2]],
+                ['type' => 'footer', 'content' => '', 'settings' => ['companyName' => 'Event 2024', 'copyrightText' => '© 2024', 'backgroundColor' => '#7c3aed', 'textColor' => '#ffffff', 'gridColumns' => 12, 'gridOffset' => 0]]
+            ]
+        ]
+    ];
+}
+
+/**
+ * Mostra pagina selezione template
+ */
+function showTemplates($db) {
+    $templates = getPageTemplates();
+    ?>
+    <!DOCTYPE html>
+    <html lang="it">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Scegli Template - SpaSpb</title>
+        <link rel="stylesheet" href="css/builder.css">
+        <style>
+            .templates-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+                gap: 24px;
+                padding: 24px;
+            }
+            .template-card {
+                background: white;
+                border-radius: 12px;
+                padding: 24px;
+                text-align: center;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                cursor: pointer;
+                transition: all 0.2s;
+                border: 2px solid transparent;
+            }
+            .template-card:hover {
+                border-color: #3b82f6;
+                transform: translateY(-4px);
+                box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+            }
+            .template-icon {
+                font-size: 3rem;
+                margin-bottom: 16px;
+            }
+            .template-name {
+                font-weight: 600;
+                font-size: 1.25rem;
+                margin-bottom: 8px;
+            }
+            .template-desc {
+                color: #6b7280;
+                font-size: 0.875rem;
+            }
+            .ui-select {
+                margin-top: 16px;
+            }
+            .ui-select select {
+                padding: 8px 12px;
+                border-radius: 6px;
+                border: 1px solid #e5e7eb;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="dashboard">
+            <div class="dashboard-header">
+                <h1>Scegli un Template</h1>
+                <a href="?action=dashboard" class="btn btn-secondary">← Torna alla Dashboard</a>
+            </div>
+
+            <div class="templates-grid">
+                <?php foreach ($templates as $key => $template): ?>
+                    <div class="template-card" onclick="selectTemplate('<?= $key ?>')">
+                        <div class="template-icon"><?= $template['icon'] ?></div>
+                        <div class="template-name"><?= htmlspecialchars($template['name']) ?></div>
+                        <div class="template-desc"><?= htmlspecialchars($template['description']) ?></div>
+                        <div class="ui-select">
+                            <select id="ui-<?= $key ?>" onclick="event.stopPropagation()">
+                                <option value="tailwind">Tailwind</option>
+                                <option value="bootstrap">Bootstrap</option>
+                                <option value="shadcn">shadcn/ui</option>
+                                <option value="bulma">Bulma</option>
+                            </select>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+
+        <script>
+        function selectTemplate(key) {
+            const uiLibrary = document.getElementById('ui-' + key).value;
+            window.location.href = `?action=new_from_template&template=${key}&ui_library=${uiLibrary}`;
+        }
+        </script>
+    </body>
+    </html>
+    <?php
+}
+
+/**
+ * Crea pagina da template
+ */
+function createFromTemplate($db) {
+    $templateKey = $_GET['template'] ?? 'blank';
+    $uiLibrary = $_GET['ui_library'] ?? 'tailwind';
+
+    $templates = getPageTemplates();
+    $template = $templates[$templateKey] ?? $templates['blank'];
+
+    $title = $template['name'] . ' - ' . date('d/m/Y H:i');
+    $slug = 'page-' . time();
+
+    // Genera ID univoci per i blocchi
+    $blocks = [];
+    foreach ($template['blocks'] as $block) {
+        $block['id'] = uniqid('block_');
+        $blocks[] = $block;
+    }
+
+    $stmt = $db->prepare("INSERT INTO pages (title, slug, ui_library, blocks) VALUES (?, ?, ?, ?)");
+    $stmt->bindValue(1, $title, SQLITE3_TEXT);
+    $stmt->bindValue(2, $slug, SQLITE3_TEXT);
+    $stmt->bindValue(3, $uiLibrary, SQLITE3_TEXT);
+    $stmt->bindValue(4, json_encode($blocks), SQLITE3_TEXT);
+    $stmt->execute();
+
+    $id = $db->lastInsertRowID();
+    header("Location: ?action=edit&id={$id}");
+    exit;
+}
+
+/**
+ * Export pagina come JSON
+ */
+function apiExportJson($db) {
+    $id = $_GET['id'] ?? 0;
+
+    $stmt = $db->prepare("SELECT * FROM pages WHERE id = ?");
+    $stmt->bindValue(1, $id, SQLITE3_INTEGER);
+    $result = $stmt->execute();
+    $page = $result->fetchArray(SQLITE3_ASSOC);
+
+    if (!$page) {
+        header('Content-Type: application/json');
+        echo json_encode(['error' => 'Pagina non trovata']);
+        exit;
+    }
+
+    $exportData = [
+        'version' => '1.0',
+        'exported_at' => date('c'),
+        'page' => [
+            'title' => $page['title'],
+            'ui_library' => $page['ui_library'],
+            'blocks' => json_decode($page['blocks'], true)
+        ]
+    ];
+
+    $filename = preg_replace('/[^a-z0-9]/i', '_', $page['title']) . '.json';
+
+    header('Content-Type: application/json');
+    header('Content-Disposition: attachment; filename="' . $filename . '"');
+    echo json_encode($exportData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+/**
+ * Import pagina da JSON
+ */
+function apiImportJson($db) {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        header('Content-Type: application/json');
+        echo json_encode(['error' => 'Metodo non consentito']);
+        exit;
+    }
+
+    verifyCsrfToken();
+
+    if (!isset($_FILES['json_file']) || $_FILES['json_file']['error'] !== UPLOAD_ERR_OK) {
+        header('Content-Type: application/json');
+        echo json_encode(['error' => 'Nessun file caricato']);
+        exit;
+    }
+
+    $content = file_get_contents($_FILES['json_file']['tmp_name']);
+    $data = json_decode($content, true);
+
+    if (!$data || !isset($data['page'])) {
+        header('Content-Type: application/json');
+        echo json_encode(['error' => 'Formato JSON non valido']);
+        exit;
+    }
+
+    $page = $data['page'];
+    $title = ($page['title'] ?? 'Imported') . ' (Importato)';
+    $slug = 'page-' . time();
+    $uiLibrary = $page['ui_library'] ?? 'tailwind';
+    $blocks = $page['blocks'] ?? [];
+
+    // Rigenera ID blocchi
+    foreach ($blocks as &$block) {
+        $block['id'] = uniqid('block_');
+    }
+
+    $stmt = $db->prepare("INSERT INTO pages (title, slug, ui_library, blocks) VALUES (?, ?, ?, ?)");
+    $stmt->bindValue(1, $title, SQLITE3_TEXT);
+    $stmt->bindValue(2, $slug, SQLITE3_TEXT);
+    $stmt->bindValue(3, $uiLibrary, SQLITE3_TEXT);
+    $stmt->bindValue(4, json_encode($blocks), SQLITE3_TEXT);
+    $stmt->execute();
+
+    $id = $db->lastInsertRowID();
+
+    header('Content-Type: application/json');
+    echo json_encode(['success' => true, 'id' => $id]);
     exit;
 }
 
