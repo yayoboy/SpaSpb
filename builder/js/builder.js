@@ -2131,3 +2131,824 @@ document.addEventListener('dblclick', function(e) {
         enableInlineEdit(blockId);
     }
 });
+
+/* ============================
+   IMPROVED DRAG & DROP
+   ============================ */
+
+let dragGhost = null;
+let dropIndicator = null;
+
+/**
+ * Inizializza drag & drop migliorato
+ */
+function initImprovedDragDrop() {
+    const blockItems = document.querySelectorAll('.block-item');
+
+    blockItems.forEach(item => {
+        // Make focusable for accessibility
+        item.setAttribute('tabindex', '0');
+        item.setAttribute('role', 'button');
+        item.setAttribute('aria-label', `Aggiungi blocco ${item.querySelector('span:last-child')?.textContent || ''}`);
+
+        item.addEventListener('dragstart', handleDragStart);
+        item.addEventListener('dragend', handleDragEnd);
+
+        // Keyboard support
+        item.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                addBlock(item.dataset.type);
+            }
+        });
+    });
+
+    const canvas = document.getElementById('canvas');
+    canvas.addEventListener('dragenter', handleDragEnter);
+    canvas.addEventListener('dragover', handleDragOver);
+    canvas.addEventListener('dragleave', handleDragLeave);
+    canvas.addEventListener('drop', handleDrop);
+}
+
+/**
+ * Gestisce inizio drag
+ */
+function handleDragStart(e) {
+    draggedType = this.dataset.type;
+    this.classList.add('dragging');
+
+    // Crea ghost personalizzato
+    createDragGhost(this);
+
+    // Imposta immagine drag trasparente
+    const img = new Image();
+    img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+    e.dataTransfer.setDragImage(img, 0, 0);
+    e.dataTransfer.effectAllowed = 'copy';
+}
+
+/**
+ * Gestisce fine drag
+ */
+function handleDragEnd(e) {
+    this.classList.remove('dragging');
+    removeDragGhost();
+    removeDropIndicator();
+
+    const canvas = document.getElementById('canvas');
+    canvas.classList.remove('drag-over', 'drag-active');
+}
+
+/**
+ * Crea ghost personalizzato
+ */
+function createDragGhost(element) {
+    removeDragGhost();
+
+    dragGhost = document.createElement('div');
+    dragGhost.className = 'drag-ghost';
+    dragGhost.innerHTML = `
+        <span class="ghost-icon">${element.querySelector('.block-icon')?.textContent || '📦'}</span>
+        <span class="ghost-label">${element.querySelector('span:last-child')?.textContent || 'Blocco'}</span>
+    `;
+    document.body.appendChild(dragGhost);
+
+    // Segui il mouse
+    document.addEventListener('dragover', updateGhostPosition);
+}
+
+/**
+ * Aggiorna posizione ghost
+ */
+function updateGhostPosition(e) {
+    if (dragGhost) {
+        dragGhost.style.left = (e.clientX + 15) + 'px';
+        dragGhost.style.top = (e.clientY + 15) + 'px';
+    }
+}
+
+/**
+ * Rimuovi ghost
+ */
+function removeDragGhost() {
+    if (dragGhost) {
+        dragGhost.remove();
+        dragGhost = null;
+    }
+    document.removeEventListener('dragover', updateGhostPosition);
+}
+
+/**
+ * Gestisce drag enter sul canvas
+ */
+function handleDragEnter(e) {
+    e.preventDefault();
+    this.classList.add('drag-over', 'drag-active');
+}
+
+/**
+ * Gestisce drag over sul canvas
+ */
+function handleDragOver(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+
+    // Mostra indicatore di drop
+    showDropIndicator(e.clientY);
+}
+
+/**
+ * Gestisce drag leave dal canvas
+ */
+function handleDragLeave(e) {
+    // Solo se lasciamo davvero il canvas
+    if (!e.relatedTarget || !this.contains(e.relatedTarget)) {
+        this.classList.remove('drag-over', 'drag-active');
+        removeDropIndicator();
+    }
+}
+
+/**
+ * Gestisce drop sul canvas
+ */
+function handleDrop(e) {
+    e.preventDefault();
+    this.classList.remove('drag-over', 'drag-active');
+
+    if (draggedType) {
+        // Trova posizione di inserimento
+        const dropPosition = getDropPosition(e.clientY);
+        addBlockAtPosition(draggedType, dropPosition);
+        draggedType = null;
+    }
+
+    removeDropIndicator();
+}
+
+/**
+ * Mostra indicatore di drop
+ */
+function showDropIndicator(y) {
+    const canvas = document.getElementById('canvas');
+    const gridContainer = canvas.querySelector('.grid-container');
+
+    if (!gridContainer) {
+        // Se non ci sono blocchi, non mostrare l'indicatore
+        return;
+    }
+
+    // Crea o ottieni indicatore
+    if (!dropIndicator) {
+        dropIndicator = document.createElement('div');
+        dropIndicator.className = 'drop-indicator';
+    }
+
+    // Trova posizione
+    const blocks = gridContainer.querySelectorAll('.canvas-block');
+    let insertBefore = null;
+
+    for (const block of blocks) {
+        const rect = block.getBoundingClientRect();
+        if (y < rect.top + rect.height / 2) {
+            insertBefore = block;
+            break;
+        }
+    }
+
+    // Inserisci indicatore
+    if (insertBefore) {
+        gridContainer.insertBefore(dropIndicator, insertBefore);
+    } else {
+        gridContainer.appendChild(dropIndicator);
+    }
+}
+
+/**
+ * Rimuovi indicatore di drop
+ */
+function removeDropIndicator() {
+    if (dropIndicator && dropIndicator.parentNode) {
+        dropIndicator.remove();
+    }
+    dropIndicator = null;
+}
+
+/**
+ * Ottieni posizione di drop
+ */
+function getDropPosition(y) {
+    const canvas = document.getElementById('canvas');
+    const gridContainer = canvas.querySelector('.grid-container');
+
+    if (!gridContainer) return 0;
+
+    const blockEls = gridContainer.querySelectorAll('.canvas-block');
+    let position = blocks.length;
+
+    for (let i = 0; i < blockEls.length; i++) {
+        const rect = blockEls[i].getBoundingClientRect();
+        if (y < rect.top + rect.height / 2) {
+            position = i;
+            break;
+        }
+    }
+
+    return position;
+}
+
+/**
+ * Aggiunge blocco in posizione specifica
+ */
+function addBlockAtPosition(type, position) {
+    const block = {
+        id: generateId(),
+        type: type,
+        content: getDefaultContent(type),
+        settings: getDefaultSettings(type)
+    };
+
+    // Inserisci in posizione
+    blocks.splice(position, 0, block);
+    saveToHistory();
+    renderCanvas();
+
+    // Animazione drop
+    setTimeout(() => {
+        const blockEl = document.querySelector(`.canvas-block[data-id="${block.id}"]`);
+        if (blockEl) {
+            blockEl.classList.add('just-dropped');
+            setTimeout(() => blockEl.classList.remove('just-dropped'), 400);
+        }
+    }, 50);
+
+    selectBlock(block.id);
+    showNotification(`Blocco ${getBlockLabel(type)} aggiunto`, 'success');
+}
+
+/* ============================
+   PROPERTIES PANEL TABS
+   ============================ */
+
+/**
+ * Mostra proprietà con tabs
+ */
+function showPropertiesWithTabs(block) {
+    const panel = document.getElementById('properties-panel');
+    const content = document.getElementById('properties-content');
+
+    panel.classList.add('active');
+
+    let html = `
+        <h4 style="padding: 0 16px; margin-bottom: 0;">${getBlockLabel(block.type)}</h4>
+
+        <div class="properties-tabs-container">
+            <div class="properties-tabs" role="tablist">
+                <button class="properties-tab active" onclick="switchTab('content')" role="tab" aria-selected="true" aria-controls="tab-content">
+                    <span class="properties-tab-icon">📝</span>
+                    Contenuto
+                </button>
+                <button class="properties-tab" onclick="switchTab('style')" role="tab" aria-selected="false" aria-controls="tab-style">
+                    <span class="properties-tab-icon">🎨</span>
+                    Stile
+                </button>
+                <button class="properties-tab" onclick="switchTab('layout')" role="tab" aria-selected="false" aria-controls="tab-layout">
+                    <span class="properties-tab-icon">📐</span>
+                    Layout
+                </button>
+                <button class="properties-tab" onclick="switchTab('animation')" role="tab" aria-selected="false" aria-controls="tab-animation">
+                    <span class="properties-tab-icon">✨</span>
+                    Animazione
+                </button>
+            </div>
+        </div>
+
+        <!-- Tab: Contenuto -->
+        <div id="tab-content" class="tab-content active" role="tabpanel">
+            <div class="property-group">
+                <label for="block-content">Contenuto HTML</label>
+                <textarea id="block-content" rows="6" class="form-control" aria-describedby="content-help">${escapeHtml(block.content)}</textarea>
+                <small id="content-help" class="text-muted">Inserisci il contenuto HTML del blocco</small>
+            </div>
+            ${renderContentSettings(block)}
+        </div>
+
+        <!-- Tab: Stile -->
+        <div id="tab-style" class="tab-content" role="tabpanel">
+            ${renderStyleSettings(block)}
+        </div>
+
+        <!-- Tab: Layout -->
+        <div id="tab-layout" class="tab-content" role="tabpanel">
+            ${renderLayoutSettings(block)}
+        </div>
+
+        <!-- Tab: Animazione -->
+        <div id="tab-animation" class="tab-content" role="tabpanel">
+            ${renderAnimationSettings(block)}
+        </div>
+
+        <div class="property-actions" style="padding: 16px;">
+            <button onclick="saveBlockProperties()" class="btn btn-primary btn-block">Applica Modifiche</button>
+        </div>
+    `;
+
+    content.innerHTML = html;
+}
+
+/**
+ * Switch tra tabs
+ */
+function switchTab(tabId) {
+    // Aggiorna bottoni tab
+    document.querySelectorAll('.properties-tab').forEach(tab => {
+        tab.classList.remove('active');
+        tab.setAttribute('aria-selected', 'false');
+    });
+
+    const activeTab = document.querySelector(`.properties-tab[onclick="switchTab('${tabId}')"]`);
+    if (activeTab) {
+        activeTab.classList.add('active');
+        activeTab.setAttribute('aria-selected', 'true');
+    }
+
+    // Aggiorna contenuto tab
+    document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.remove('active');
+    });
+
+    const activeContent = document.getElementById(`tab-${tabId}`);
+    if (activeContent) {
+        activeContent.classList.add('active');
+    }
+}
+
+/**
+ * Renderizza settings contenuto
+ */
+function renderContentSettings(block) {
+    let html = '';
+
+    switch (block.type) {
+        case 'image':
+            html = `
+                <div class="property-group">
+                    <label>Immagine</label>
+                    <input type="file" id="image-upload" class="form-control" accept="image/*" onchange="uploadImage(this)">
+                    ${block.settings.image ? `<img src="${block.settings.image}" style="max-width: 100%; margin-top: 10px; border-radius: 4px;">` : ''}
+                    <input type="hidden" id="setting-image" value="${block.settings.image || ''}">
+                </div>
+                <div class="property-group">
+                    <label>Testo alternativo (Alt)</label>
+                    <input type="text" id="setting-alt" value="${block.settings.alt || ''}" class="form-control" placeholder="Descrizione immagine">
+                </div>
+            `;
+            break;
+
+        case 'video':
+            html = `
+                <div class="property-group">
+                    <label>URL Video (YouTube/Vimeo embed)</label>
+                    <input type="text" id="setting-videoUrl" value="${block.settings.videoUrl || ''}" class="form-control" placeholder="https://www.youtube.com/embed/...">
+                </div>
+                <div class="property-group">
+                    <label>Aspect Ratio</label>
+                    <select id="setting-aspectRatio" class="form-control">
+                        <option value="16:9" ${block.settings.aspectRatio === '16:9' ? 'selected' : ''}>16:9</option>
+                        <option value="4:3" ${block.settings.aspectRatio === '4:3' ? 'selected' : ''}>4:3</option>
+                        <option value="1:1" ${block.settings.aspectRatio === '1:1' ? 'selected' : ''}>1:1</option>
+                    </select>
+                </div>
+            `;
+            break;
+
+        case 'cta':
+            html = `
+                <div class="property-group">
+                    <label>Testo Bottone</label>
+                    <input type="text" id="setting-buttonText" value="${block.settings.buttonText || ''}" class="form-control">
+                </div>
+                <div class="property-group">
+                    <label>Link Bottone</label>
+                    <input type="text" id="setting-buttonLink" value="${block.settings.buttonLink || ''}" class="form-control">
+                </div>
+            `;
+            break;
+
+        case 'countdown':
+            html = `
+                <div class="property-group">
+                    <label>Data Target</label>
+                    <input type="date" id="setting-targetDate" value="${block.settings.targetDate || ''}" class="form-control">
+                </div>
+            `;
+            break;
+
+        case 'header':
+            html = `
+                <div class="property-group">
+                    <label>Testo Logo</label>
+                    <input type="text" id="setting-logoText" value="${block.settings.logoText || ''}" class="form-control">
+                </div>
+                <div class="property-group">
+                    <label>Testo CTA</label>
+                    <input type="text" id="setting-ctaText" value="${block.settings.ctaText || ''}" class="form-control">
+                </div>
+                <div class="property-group">
+                    <label>URL CTA</label>
+                    <input type="text" id="setting-ctaUrl" value="${block.settings.ctaUrl || ''}" class="form-control">
+                </div>
+                <div class="property-group">
+                    <label>
+                        <input type="checkbox" id="setting-sticky" ${block.settings.sticky ? 'checked' : ''}>
+                        Sticky Header
+                    </label>
+                </div>
+            `;
+            break;
+
+        case 'footer':
+            html = `
+                <div class="property-group">
+                    <label>Nome Azienda</label>
+                    <input type="text" id="setting-companyName" value="${block.settings.companyName || ''}" class="form-control">
+                </div>
+                <div class="property-group">
+                    <label>Descrizione</label>
+                    <textarea id="setting-companyDescription" class="form-control" rows="2">${block.settings.companyDescription || ''}</textarea>
+                </div>
+                <div class="property-group">
+                    <label>Testo Copyright</label>
+                    <input type="text" id="setting-copyrightText" value="${block.settings.copyrightText || ''}" class="form-control">
+                </div>
+            `;
+            break;
+
+        case 'faq':
+        case 'testimonials':
+        case 'pricing':
+            html = `
+                <div class="property-group">
+                    <label>Titolo Sezione</label>
+                    <input type="text" id="setting-title" value="${block.settings.title || ''}" class="form-control">
+                </div>
+                <div class="property-group">
+                    <label>Sottotitolo</label>
+                    <input type="text" id="setting-subtitle" value="${block.settings.subtitle || ''}" class="form-control">
+                </div>
+            `;
+            break;
+
+        case 'gallery':
+            html = `
+                <div class="property-group">
+                    <label>Aggiungi Immagini</label>
+                    <input type="file" id="gallery-upload" class="form-control" accept="image/*" multiple onchange="uploadGalleryImages(this)">
+                </div>
+                <div class="property-group">
+                    <label>Colonne</label>
+                    <select id="setting-columns" class="form-control">
+                        <option value="1" ${block.settings.columns == 1 ? 'selected' : ''}>1</option>
+                        <option value="2" ${block.settings.columns == 2 ? 'selected' : ''}>2</option>
+                        <option value="3" ${block.settings.columns == 3 ? 'selected' : ''}>3</option>
+                        <option value="4" ${block.settings.columns == 4 ? 'selected' : ''}>4</option>
+                        <option value="6" ${block.settings.columns == 6 ? 'selected' : ''}>6</option>
+                    </select>
+                </div>
+                <div class="property-group">
+                    <label>Spaziatura</label>
+                    <select id="setting-gap" class="form-control">
+                        <option value="small" ${block.settings.gap === 'small' ? 'selected' : ''}>Piccola</option>
+                        <option value="medium" ${block.settings.gap === 'medium' ? 'selected' : ''}>Media</option>
+                        <option value="large" ${block.settings.gap === 'large' ? 'selected' : ''}>Grande</option>
+                    </select>
+                </div>
+            `;
+            break;
+    }
+
+    return html;
+}
+
+/**
+ * Renderizza settings stile
+ */
+function renderStyleSettings(block) {
+    const hasBackgroundColor = ['hero', 'cta', 'countdown', 'header', 'footer', 'faq', 'testimonials', 'pricing'].includes(block.type);
+    const hasTextColor = hasBackgroundColor;
+    const hasAlign = ['hero', 'text'].includes(block.type);
+
+    let html = '';
+
+    if (hasBackgroundColor) {
+        html += `
+            <div class="property-group">
+                <label>Colore Sfondo</label>
+                ${renderAdvancedColorPicker('backgroundColor', block.settings.backgroundColor || '#ffffff')}
+            </div>
+        `;
+    }
+
+    if (hasTextColor) {
+        html += `
+            <div class="property-group">
+                <label>Colore Testo</label>
+                ${renderAdvancedColorPicker('textColor', block.settings.textColor || '#1f2937')}
+            </div>
+        `;
+    }
+
+    if (hasAlign) {
+        html += `
+            <div class="property-group">
+                <label>Allineamento</label>
+                <select id="setting-align" class="form-control">
+                    <option value="left" ${block.settings.align === 'left' ? 'selected' : ''}>Sinistra</option>
+                    <option value="center" ${block.settings.align === 'center' ? 'selected' : ''}>Centro</option>
+                    <option value="right" ${block.settings.align === 'right' ? 'selected' : ''}>Destra</option>
+                </select>
+            </div>
+        `;
+    }
+
+    if (block.type === 'hero') {
+        html += `
+            <div class="property-group">
+                <label>Altezza</label>
+                <input type="text" id="setting-height" value="${block.settings.height || '500px'}" class="form-control" placeholder="500px">
+            </div>
+        `;
+    }
+
+    if (block.type === 'text') {
+        html += `
+            <div class="property-group">
+                <label>Padding</label>
+                <input type="text" id="setting-padding" value="${block.settings.padding || '40px'}" class="form-control" placeholder="40px">
+            </div>
+        `;
+    }
+
+    if (!html) {
+        html = '<p class="text-muted">Nessuna impostazione di stile disponibile per questo blocco.</p>';
+    }
+
+    return html;
+}
+
+/**
+ * Renderizza settings layout
+ */
+function renderLayoutSettings(block) {
+    return `
+        <div class="property-group">
+            <label>Larghezza (colonne)</label>
+            <input type="range" id="setting-gridColumns" min="1" max="12" value="${block.settings.gridColumns || 12}"
+                   class="form-control range-slider" oninput="updateGridPreview(this)">
+            <span class="range-value">${block.settings.gridColumns || 12}/12</span>
+        </div>
+        <div class="property-group">
+            <label>Offset (colonne)</label>
+            <input type="range" id="setting-gridOffset" min="0" max="11" value="${block.settings.gridOffset || 0}"
+                   class="form-control range-slider" oninput="updateGridPreview(this)">
+            <span class="range-value">${block.settings.gridOffset || 0}</span>
+        </div>
+        <div class="property-group">
+            <label>Altezza minima</label>
+            <input type="text" id="setting-minHeight" value="${block.settings.minHeight || 'auto'}"
+                   class="form-control" placeholder="auto, 200px, 50vh">
+        </div>
+    `;
+}
+
+/**
+ * Renderizza settings animazione
+ */
+function renderAnimationSettings(block) {
+    return `
+        <div class="property-group">
+            <label>Tipo Animazione</label>
+            <select id="setting-animation" class="form-control">
+                <option value="none" ${(block.settings.animation || 'none') === 'none' ? 'selected' : ''}>Nessuna</option>
+                <option value="fade-in" ${block.settings.animation === 'fade-in' ? 'selected' : ''}>Fade In</option>
+                <option value="slide-up" ${block.settings.animation === 'slide-up' ? 'selected' : ''}>Slide Up</option>
+                <option value="slide-down" ${block.settings.animation === 'slide-down' ? 'selected' : ''}>Slide Down</option>
+                <option value="slide-left" ${block.settings.animation === 'slide-left' ? 'selected' : ''}>Slide Left</option>
+                <option value="slide-right" ${block.settings.animation === 'slide-right' ? 'selected' : ''}>Slide Right</option>
+                <option value="zoom-in" ${block.settings.animation === 'zoom-in' ? 'selected' : ''}>Zoom In</option>
+                <option value="zoom-out" ${block.settings.animation === 'zoom-out' ? 'selected' : ''}>Zoom Out</option>
+                <option value="flip" ${block.settings.animation === 'flip' ? 'selected' : ''}>Flip</option>
+                <option value="bounce" ${block.settings.animation === 'bounce' ? 'selected' : ''}>Bounce</option>
+            </select>
+        </div>
+        <div class="property-group">
+            <label>Durata (secondi)</label>
+            <select id="setting-animationDuration" class="form-control">
+                <option value="0.3" ${block.settings.animationDuration === '0.3' ? 'selected' : ''}>0.3s (Veloce)</option>
+                <option value="0.6" ${(block.settings.animationDuration || '0.6') === '0.6' ? 'selected' : ''}>0.6s (Normale)</option>
+                <option value="1" ${block.settings.animationDuration === '1' ? 'selected' : ''}>1s (Lento)</option>
+                <option value="1.5" ${block.settings.animationDuration === '1.5' ? 'selected' : ''}>1.5s (Molto lento)</option>
+            </select>
+        </div>
+        <div class="property-group">
+            <label>Ritardo (secondi)</label>
+            <select id="setting-animationDelay" class="form-control">
+                <option value="0" ${(block.settings.animationDelay || '0') === '0' ? 'selected' : ''}>0s</option>
+                <option value="0.1" ${block.settings.animationDelay === '0.1' ? 'selected' : ''}>0.1s</option>
+                <option value="0.2" ${block.settings.animationDelay === '0.2' ? 'selected' : ''}>0.2s</option>
+                <option value="0.3" ${block.settings.animationDelay === '0.3' ? 'selected' : ''}>0.3s</option>
+                <option value="0.5" ${block.settings.animationDelay === '0.5' ? 'selected' : ''}>0.5s</option>
+                <option value="1" ${block.settings.animationDelay === '1' ? 'selected' : ''}>1s</option>
+            </select>
+        </div>
+        <button type="button" onclick="previewAnimation('${block.id}')" class="btn btn-sm btn-secondary btn-block">
+            ▶ Anteprima Animazione
+        </button>
+    `;
+}
+
+/* ============================
+   ADVANCED COLOR PICKER
+   ============================ */
+
+const colorPresets = [
+    '#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16',
+    '#22c55e', '#10b981', '#14b8a6', '#06b6d4', '#0ea5e9',
+    '#3b82f6', '#6366f1', '#8b5cf6', '#a855f7', '#d946ef',
+    '#ec4899', '#f43f5e', '#1f2937', '#6b7280', '#ffffff'
+];
+
+/**
+ * Renderizza color picker avanzato
+ */
+function renderAdvancedColorPicker(settingId, currentValue) {
+    return `
+        <div class="color-picker-advanced">
+            <div class="color-picker-preview" onclick="document.getElementById('setting-${settingId}').click()">
+                <div class="color-picker-swatch" id="swatch-${settingId}" style="background: ${currentValue}"></div>
+                <span class="color-picker-value" id="value-${settingId}">${currentValue}</span>
+            </div>
+            <input type="color" id="setting-${settingId}" value="${currentValue}"
+                   class="color-picker-input" onchange="updateColorPreview('${settingId}', this.value)">
+            <div class="color-presets">
+                ${colorPresets.map(color => `
+                    <div class="color-preset ${color === currentValue ? 'active' : ''}"
+                         style="background: ${color}"
+                         onclick="selectColorPreset('${settingId}', '${color}')"
+                         title="${color}"></div>
+                `).join('')}
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Aggiorna preview colore
+ */
+function updateColorPreview(settingId, value) {
+    const swatch = document.getElementById(`swatch-${settingId}`);
+    const valueEl = document.getElementById(`value-${settingId}`);
+
+    if (swatch) swatch.style.background = value;
+    if (valueEl) valueEl.textContent = value;
+
+    // Aggiorna preset attivo
+    const presets = document.querySelectorAll(`#setting-${settingId}`).closest('.color-picker-advanced')?.querySelectorAll('.color-preset');
+    presets?.forEach(preset => {
+        preset.classList.toggle('active', preset.style.background === value);
+    });
+}
+
+/**
+ * Seleziona preset colore
+ */
+function selectColorPreset(settingId, color) {
+    const input = document.getElementById(`setting-${settingId}`);
+    if (input) {
+        input.value = color;
+        updateColorPreview(settingId, color);
+    }
+}
+
+/* ============================
+   DEBOUNCE UTILITY
+   ============================ */
+
+/**
+ * Crea funzione debounced
+ */
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+// Debounced auto-save
+const debouncedAutoSave = debounce(savePage, 2000);
+
+/* ============================
+   KEYBOARD SHORTCUTS PANEL
+   ============================ */
+
+/**
+ * Mostra/nascondi panel shortcuts
+ */
+function toggleShortcutsPanel() {
+    let panel = document.getElementById('shortcuts-hint');
+
+    if (!panel) {
+        panel = document.createElement('div');
+        panel.id = 'shortcuts-hint';
+        panel.className = 'shortcuts-hint';
+        panel.innerHTML = `
+            <div style="font-weight: bold; margin-bottom: 8px;">Scorciatoie da tastiera</div>
+            <div class="shortcut-item">
+                <span>Salva</span>
+                <span class="shortcut-key">Ctrl+S</span>
+            </div>
+            <div class="shortcut-item">
+                <span>Annulla</span>
+                <span class="shortcut-key">Ctrl+Z</span>
+            </div>
+            <div class="shortcut-item">
+                <span>Ripristina</span>
+                <span class="shortcut-key">Ctrl+Y</span>
+            </div>
+            <div class="shortcut-item">
+                <span>Elimina blocco</span>
+                <span class="shortcut-key">Del</span>
+            </div>
+            <div class="shortcut-item">
+                <span>Chiudi pannello</span>
+                <span class="shortcut-key">Esc</span>
+            </div>
+        `;
+        document.body.appendChild(panel);
+    }
+
+    panel.classList.toggle('visible');
+}
+
+// Aggiungi shortcut per mostrare panel (? key)
+document.addEventListener('keydown', function(e) {
+    if (e.key === '?' && !['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) {
+        e.preventDefault();
+        toggleShortcutsPanel();
+    }
+});
+
+/* ============================
+   ACCESSIBILITY ENHANCEMENTS
+   ============================ */
+
+/**
+ * Aggiungi ARIA labels e roles
+ */
+function enhanceAccessibility() {
+    // Canvas
+    const canvas = document.getElementById('canvas');
+    if (canvas) {
+        canvas.setAttribute('role', 'region');
+        canvas.setAttribute('aria-label', 'Area di costruzione pagina');
+    }
+
+    // Sidebar
+    const sidebar = document.querySelector('.sidebar');
+    if (sidebar) {
+        sidebar.setAttribute('role', 'navigation');
+        sidebar.setAttribute('aria-label', 'Palette blocchi');
+    }
+
+    // Properties panel
+    const properties = document.getElementById('properties-panel');
+    if (properties) {
+        properties.setAttribute('role', 'complementary');
+        properties.setAttribute('aria-label', 'Pannello proprietà');
+    }
+
+    // Toolbar
+    const toolbar = document.querySelector('.editor-toolbar');
+    if (toolbar) {
+        toolbar.setAttribute('role', 'toolbar');
+        toolbar.setAttribute('aria-label', 'Barra degli strumenti');
+    }
+}
+
+// Override della funzione showProperties per usare tabs
+const originalShowProperties = showProperties;
+showProperties = function(block) {
+    showPropertiesWithTabs(block);
+};
+
+// Inizializza miglioramenti all'avvio
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(() => {
+        initImprovedDragDrop();
+        enhanceAccessibility();
+    }, 100);
+});

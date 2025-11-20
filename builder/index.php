@@ -903,6 +903,10 @@ function showEditor($db) {
         <link rel="stylesheet" href="css/builder.css">
     </head>
     <body class="editor">
+        <!-- Skip Links for Accessibility -->
+        <a href="#canvas" class="skip-link">Salta al canvas</a>
+        <a href="#properties-panel" class="skip-link" style="left: 150px;">Salta alle proprietà</a>
+
         <div class="editor-layout">
             <!-- Sidebar -->
             <aside class="sidebar">
