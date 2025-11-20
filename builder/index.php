@@ -338,21 +338,49 @@ function showDashboard($db) {
                 </div>
             </header>
 
-            <div class="pages-grid">
+            <!-- Search Bar -->
+            <?php if (!empty($pages)): ?>
+            <div class="search-bar">
+                <span class="search-icon icon">
+                    <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                </span>
+                <input type="text" id="search-pages" placeholder="Cerca pagine..." onkeyup="filterPages(this.value)">
+            </div>
+            <?php endif; ?>
+
+            <div class="pages-grid" id="pages-grid">
                 <?php if (empty($pages)): ?>
                     <div class="empty-state">
-                        <p>Nessuna pagina creata.</p>
-                        <a href="?action=new" class="btn btn-primary">Crea la tua prima pagina</a>
+                        <div class="empty-state-icon">
+                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
+                                <polyline points="14,2 14,8 20,8"/>
+                                <line x1="12" y1="18" x2="12" y2="12"/>
+                                <line x1="9" y1="15" x2="15" y2="15"/>
+                            </svg>
+                        </div>
+                        <h3>Nessuna pagina creata</h3>
+                        <p>Inizia creando la tua prima pagina con uno dei template disponibili.</p>
+                        <a href="?action=templates" class="btn btn-primary">Crea prima pagina</a>
                     </div>
                 <?php else: ?>
-                    <?php foreach ($pages as $page): ?>
-                        <div class="page-card">
+                    <?php foreach ($pages as $page):
+                        $blockCount = count(json_decode($page['blocks'], true) ?: []);
+                    ?>
+                        <div class="page-card" data-title="<?= strtolower(htmlspecialchars($page['title'])) ?>">
+                            <div class="page-card-thumbnail">
+                                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                    <rect x="3" y="3" width="18" height="18" rx="2"/>
+                                    <path d="M3 9h18"/>
+                                    <path d="M9 21V9"/>
+                                </svg>
+                            </div>
                             <div class="page-card-header">
                                 <h3><?= htmlspecialchars($page['title']) ?></h3>
                                 <span class="badge"><?= htmlspecialchars($page['ui_library']) ?></span>
                             </div>
                             <div class="page-card-meta">
-                                <small>Aggiornato: <?= date('d/m/Y H:i', strtotime($page['updated_at'])) ?></small>
+                                <small><?= $blockCount ?> blocchi • <?= date('d/m/Y H:i', strtotime($page['updated_at'])) ?></small>
                             </div>
                             <div class="page-card-actions">
                                 <a href="?action=edit&id=<?= $page['id'] ?>" class="btn btn-sm">Modifica</a>
@@ -494,6 +522,21 @@ function showDashboard($db) {
                 alert('Errore durante l\'importazione');
             });
         });
+
+        // Search filter function
+        function filterPages(query) {
+            const cards = document.querySelectorAll('.page-card');
+            const normalizedQuery = query.toLowerCase().trim();
+
+            cards.forEach(card => {
+                const title = card.dataset.title || '';
+                if (title.includes(normalizedQuery)) {
+                    card.style.display = '';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
         </script>
     </body>
     </html>

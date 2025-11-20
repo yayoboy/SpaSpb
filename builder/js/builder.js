@@ -1386,22 +1386,55 @@ function previewPage() {
 }
 
 /**
- * Mostra notifica
+ * Mostra notifica toast migliorata
  */
-function showNotification(message) {
-    const notification = document.createElement('div');
-    notification.className = 'notification';
-    notification.textContent = message;
-    document.body.appendChild(notification);
+function showNotification(message, type = 'info') {
+    // Crea container se non esiste
+    let container = document.getElementById('toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toast-container';
+        container.className = 'toast-container';
+        document.body.appendChild(container);
+    }
 
-    setTimeout(() => {
-        notification.classList.add('show');
-    }, 10);
+    // Icone per tipo
+    const icons = {
+        success: '<svg viewBox="0 0 24 24" width="20" height="20"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2" fill="none"/></svg>',
+        error: '<svg viewBox="0 0 24 24" width="20" height="20"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" fill="none"/></svg>',
+        warning: '<svg viewBox="0 0 24 24" width="20" height="20"><path d="M12 9v4m0 4h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" stroke="currentColor" stroke-width="2" fill="none"/></svg>',
+        info: '<svg viewBox="0 0 24 24" width="20" height="20"><path d="M12 16v-4m0-4h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" stroke="currentColor" stroke-width="2" fill="none"/></svg>'
+    };
 
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.innerHTML = `
+        <span class="toast-icon">${icons[type] || icons.info}</span>
+        <span class="toast-message">${message}</span>
+        <div class="toast-progress"></div>
+    `;
+
+    container.appendChild(toast);
+
+    // Auto remove after 3s
     setTimeout(() => {
-        notification.classList.remove('show');
-        setTimeout(() => notification.remove(), 300);
-    }, 2000);
+        toast.style.animation = 'slideIn 0.3s ease reverse';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+/**
+ * Shorthand per toast success
+ */
+function showSuccess(message) {
+    showNotification(message, 'success');
+}
+
+/**
+ * Shorthand per toast error
+ */
+function showError(message) {
+    showNotification(message, 'error');
 }
 
 /**
